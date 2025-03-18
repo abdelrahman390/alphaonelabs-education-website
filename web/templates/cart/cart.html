@@ -1,0 +1,392 @@
+{% extends "base.html" %}
+
+{% block title %}
+  Shopping Cart
+{% endblock title %}
+{% block content %}
+  <div class="container mx-auto px-4 py-8">
+    <div class="max-w-4xl mx-auto">
+      <h1 class="text-3xl font-bold mb-8">Shopping Cart</h1>
+      {% if cart.items.all %}
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg">
+          <!-- Cart Items -->
+          <div class="divide-y divide-gray-200 dark:divide-gray-700">
+            {% for item in cart.items.all %}
+              <div class="p-6">
+                <div class="flex items-start justify-between">
+                  <div class="flex-1">
+                    {% if item.course %}
+                      <!-- Course Item -->
+                      <h3 class="text-xl font-semibold mb-2">{{ item.course.title }}</h3>
+                      <p class="text-gray-600 dark:text-gray-400 mb-2">Full Course</p>
+                      <div class="text-sm text-gray-500 dark:text-gray-400">
+                        <p>Teacher: {{ item.course.teacher.get_full_name|default:item.course.teacher.username }}</p>
+                      </div>
+                      <p class="text-lg font-semibold mt-2">${{ item.course.price }}</p>
+                    {% elif item.session %}
+                      <!-- Individual Session Item -->
+                      <h3 class="text-xl font-semibold mb-2">{{ item.session.title }}</h3>
+                      <p class="text-gray-600 dark:text-gray-400 mb-2">Individual Session from {{ item.session.course.title }}</p>
+                      <div class="text-sm text-gray-500 dark:text-gray-400">
+                        <p>Date: {{ item.session.start_time|date:"F j, Y" }}</p>
+                        <p>Time: {{ item.session.start_time|time:"g:i A" }} - {{ item.session.end_time|time:"g:i A" }}</p>
+                        <p>Teacher: {{ item.session.course.teacher.get_full_name|default:item.session.course.teacher.username }}</p>
+                      </div>
+                      <p class="text-lg font-semibold mt-2">${{ item.session.price }}</p>
+                    {% elif item.goods %}
+                      <!-- Goods Item -->
+                      <h3 class="text-xl font-semibold mb-2">{{ item.goods.name }}</h3>
+                      <p class="text-gray-600 dark:text-gray-400 mb-2">{{ item.goods.description }}</p>
+                      <p class="text-lg font-semibold mt-2">
+                        {% if item.goods.discount_price %}
+                          <span class="line-through text-gray-500">${{ item.goods.price }}</span>
+                          <span class="text-red-500">${{ item.goods.discount_price }}</span>
+                        {% else %}
+                          ${{ item.goods.price }}
+                        {% endif %}
+                      </p>
+                    {% endif %}
+                  </div>
+                  <form method="post"
+                        action="{% url 'remove_from_cart' item.id %}"
+                        class="ml-4">
+                    {% csrf_token %}
+                    <button type="submit" class="text-red-500 hover:text-red-600">
+                      <i class="fas fa-trash"></i>
+                    </button>
+                  </form>
+                </div>
+              </div>
+            {% endfor %}
+          </div>
+          <!-- Cart Summary -->
+          <div class="p-6 bg-gray-50 dark:bg-gray-700 rounded-b-lg">
+            <div class="flex justify-between items-center mb-4">
+              <span class="text-lg font-semibold">Total:</span>
+              <span class="text-2xl font-bold">${{ cart.total }}</span>
+            </div>
+            <div class="flex justify-end">
+              <form id="checkout-form"
+                    class="w-full"
+                    method="post"
+                    action="{% url 'checkout_success' %}"
+                    data-is-authenticated="{% if request.user.is_authenticated %}true{% else %}false{% endif %}">
+                {% csrf_token %}
+                {% if not request.user.is_authenticated %}
+                  <div class="mb-4">
+                    <label for="email"
+                           class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      Email Address
+                    </label>
+                    <input type="email"
+                           id="email"
+                           name="email"
+                           required
+                           class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 dark:bg-gray-800"
+                           placeholder="Enter your email address" />
+                    <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">We'll create an account for you to access your courses.</p>
+                  </div>
+                {% endif %}
+                {% if cart.has_goods %}
+                  <div class="mb-4">
+                    <label for="address"
+                           class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      Shipping Address
+                    </label>
+                    <textarea id="address"
+                              name="address"
+                              required
+                              class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 dark:bg-gray-800"
+                              placeholder="Enter your shipping address"></textarea>
+                    <input type="text"
+                           id="city"
+                           name="city"
+                           placeholder="City"
+                           required
+                           class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 dark:bg-gray-800 mt-2" />
+                    <input type="text"
+                           id="state"
+                           name="state"
+                           placeholder="State"
+                           required
+                           class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 dark:bg-gray-800 mt-2" />
+                    <input type="text"
+                           id="postal_code"
+                           name="postal_code"
+                           placeholder="Postal Code"
+                           required
+                           class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 dark:bg-gray-800 mt-2" />
+                    <input type="text"
+                           id="country"
+                           name="country"
+                           placeholder="Country"
+                           required
+                           class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 dark:bg-gray-800 mt-2" />
+                  </div>
+                {% endif %}
+                <div id="payment-element" class="mb-4">
+                  <!-- Stripe Elements will be inserted here -->
+                </div>
+                <button type="submit"
+                        id="submit-button"
+                        class="w-full bg-orange-500 hover:bg-orange-600 text-white font-semibold py-3 px-6 rounded-lg transition duration-200 flex items-center justify-center">
+                  <i class="fas fa-credit-card mr-2"></i>
+                  <span id="button-text">Checkout</span>
+                  <span id="spinner" class="hidden ml-2">
+                    <i class="fas fa-spinner fa-spin"></i>
+                  </span>
+                </button>
+                <div id="payment-message" class="mt-4 text-sm text-center"></div>
+              </form>
+            </div>
+          </div>
+        </div>
+      {% else %}
+        <div class="text-center py-12">
+          <div class="text-gray-500 dark:text-gray-400 mb-4">Your cart is empty</div>
+          <a href="{% url 'course_search' %}"
+             class="inline-block bg-orange-500 hover:bg-orange-600 text-white font-semibold py-2 px-6 rounded-lg transition duration-200">
+            Browse Courses
+          </a>
+        </div>
+      {% endif %}
+    </div>
+  </div>
+{% endblock content %}
+{% block extra_js %}
+  {% if cart.items.all %}
+    <script src="https://js.stripe.com/v3/"></script>
+    <script>
+        // Debug output for Stripe key
+        console.log('[Debug] Template variables:', {
+            hasStripeKey: '{{ stripe_public_key }}' !== '',
+            stripeKeyValue: '{{ stripe_public_key }}'
+        });
+
+        let stripe;
+        try {
+            console.log('[Page Load] Starting cart checkout initialization');
+
+            if (!('{{ stripe_public_key }}')) {
+                console.error('[Error] No Stripe public key provided');
+                throw new Error('Stripe public key is missing');
+            }
+
+            // Initialize Stripe object
+            stripe = Stripe('{{ stripe_public_key }}');
+            let elements;
+
+            initialize();
+            checkStatus();
+
+            document
+                .querySelector("#checkout-form")
+                .addEventListener("submit", handleSubmit);
+            console.log('[Setup] Event listeners attached');
+        } catch (error) {
+            console.error('[Fatal Error]', error);
+            const messageDiv = document.querySelector("#payment-message");
+            if (messageDiv) {
+                messageDiv.textContent = "Payment system initialization failed. Please try again later.";
+                messageDiv.classList.add("text-red-500");
+            }
+        }
+
+        async function initialize() {
+            console.log('[Initialize] Starting Stripe Elements initialization');
+            try {
+                console.log('[Initialize] Fetching payment intent from:', "{% url 'create_cart_payment_intent' %}");
+                const response = await fetch("{% url 'create_cart_payment_intent' %}");
+                const data = await response.json();
+                console.log('[Initialize] Payment intent response:', {
+                    status: response.status,
+                    hasClientSecret: !!data.clientSecret,
+                    error: data.error
+                });
+
+                const {
+                    clientSecret
+                } = data;
+
+                if (!clientSecret) {
+                    console.error('[Initialize] No client secret received');
+                    showMessage("Failed to initialize payment. Please try again.");
+                    return;
+                }
+
+                const appearance = {
+                    theme: document.documentElement.classList.contains('dark') ? 'night' : 'stripe',
+                };
+                console.log('[Initialize] Creating Stripe elements with appearance:', appearance);
+
+                elements = stripe.elements({
+                    appearance,
+                    clientSecret
+                });
+                const paymentElement = elements.create("payment");
+                console.log('[Initialize] Payment element created');
+
+                paymentElement.on('ready', function(event) {
+                    console.log('[Initialize] Payment element ready');
+                });
+
+                paymentElement.on('change', function(event) {
+                    console.log('[Payment Element] Change event:', event);
+                });
+
+                paymentElement.mount("#payment-element");
+                console.log('[Initialize] Payment element mounted');
+            } catch (error) {
+                console.error('[Initialize] Error:', error);
+                showMessage("Failed to initialize payment system. Please try again.");
+            }
+        }
+
+        async function handleSubmit(e) {
+            console.log('[Submit] Starting form submission');
+            e.preventDefault();
+            setLoading(true);
+
+            const form = document.getElementById('checkout-form');
+            const isAuthenticated = form.dataset.isAuthenticated === 'true';
+            console.log('[Submit] User authentication status:', isAuthenticated);
+
+            const confirmParams = {
+                return_url: window.location.origin + "{% url 'checkout_success' %}"
+            };
+            console.log('[Submit] Return URL:', confirmParams.return_url);
+
+            if (!isAuthenticated) {
+                const emailInput = document.getElementById('email');
+                console.log('[Submit] Guest checkout - Email provided:', !!emailInput?.value);
+                if (!emailInput || !emailInput.value) {
+                    console.log('[Submit] No email provided for guest checkout');
+                    const messageDiv = document.querySelector("#payment-message");
+                    messageDiv.textContent = "Please enter your email address.";
+                    messageDiv.classList.add("text-red-500");
+                    setLoading(false);
+                    return;
+                }
+                confirmParams.receipt_email = emailInput.value;
+            }
+
+            const addressInput = document.getElementById('address');
+            const cityInput = document.getElementById('city');
+            const stateInput = document.getElementById('state');
+            const postalCodeInput = document.getElementById('postal_code');
+            const countryInput = document.getElementById('country');
+            if (addressInput && cityInput && stateInput && postalCodeInput && countryInput) {
+                confirmParams.shipping = {
+                    name: isAuthenticated ? '{{ request.user.get_full_name }}' : 'Guest',
+                    address: {
+                        line1: addressInput.value,
+                        city: cityInput.value,
+                        state: stateInput.value,
+                        postal_code: postalCodeInput.value,
+                        country: countryInput.value
+                    }
+                };
+            }
+
+            try {
+                console.log('[Submit] Confirming payment with params:', confirmParams);
+                const {
+                    error
+                } = await stripe.confirmPayment({
+                    elements,
+                    confirmParams
+                });
+
+                if (error) {
+                    console.error('[Submit] Payment error:', error);
+                    const messageDiv = document.querySelector("#payment-message");
+                    messageDiv.textContent = error.message;
+                    messageDiv.classList.add("text-red-500");
+                } else {
+                    console.log('[Submit] No immediate error, waiting for redirect');
+                    const messageDiv = document.querySelector("#payment-message");
+                    messageDiv.textContent = "Processing payment...";
+                    messageDiv.classList.remove("text-red-500");
+                    messageDiv.classList.add("text-blue-500");
+                }
+            } catch (e) {
+                console.error('[Submit] Unexpected error:', e);
+                const messageDiv = document.querySelector("#payment-message");
+                messageDiv.textContent = "An unexpected error occurred. Please try again.";
+                messageDiv.classList.add("text-red-500");
+            }
+
+            setLoading(false);
+        }
+
+        function setLoading(isLoading) {
+            console.log('[Loading] Setting loading state:', isLoading);
+            const submitButton = document.querySelector("#submit-button");
+            const spinner = document.querySelector("#spinner");
+            const buttonText = document.querySelector("#button-text");
+
+            if (isLoading) {
+                submitButton.disabled = true;
+                spinner.classList.remove("hidden");
+                buttonText.classList.add("opacity-0");
+            } else {
+                submitButton.disabled = false;
+                spinner.classList.add("hidden");
+                buttonText.classList.remove("opacity-0");
+            }
+        }
+
+        async function checkStatus() {
+            console.log('[Status] Checking payment status');
+            const clientSecret = new URLSearchParams(window.location.search).get(
+                "payment_intent_client_secret"
+            );
+            console.log('[Status] Client secret in URL:', !!clientSecret);
+
+            if (!clientSecret) return;
+
+            try {
+                console.log('[Status] Retrieving payment intent');
+                const {
+                    paymentIntent
+                } = await stripe.retrievePaymentIntent(clientSecret);
+                console.log('[Status] Payment intent status:', paymentIntent.status);
+
+                switch (paymentIntent.status) {
+                    case "succeeded":
+                        showMessage("Payment successful! Redirecting...");
+                        setTimeout(() => window.location.reload(), 2000);
+                        break;
+                    case "processing":
+                        showMessage("Payment processing. Please wait...");
+                        break;
+                    case "requires_payment_method":
+                        showMessage("Payment failed. Please try another payment method.");
+                        break;
+                    default:
+                        showMessage("Something went wrong.");
+                        break;
+                }
+            } catch (error) {
+                console.error('[Status] Error checking payment status:', error);
+                showMessage("Failed to check payment status");
+            }
+        }
+
+        function showMessage(messageText) {
+            console.log('[Message]', messageText);
+            const messageDiv = document.querySelector("#payment-message");
+            messageDiv.textContent = messageText;
+            if (messageText.includes("successful")) {
+                messageDiv.classList.remove("text-red-500");
+                messageDiv.classList.add("text-green-500");
+            } else if (messageText.includes("processing")) {
+                messageDiv.classList.remove("text-red-500");
+                messageDiv.classList.add("text-blue-500");
+            } else {
+                messageDiv.classList.add("text-red-500");
+            }
+        }
+    </script>
+  {% endif %}
+{% endblock extra_js %}

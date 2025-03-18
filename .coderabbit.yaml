@@ -1,0 +1,29 @@
+# .coderabbit.yaml
+reviews:
+  # Language settings (Python/Django)
+  language: "en"
+  # Review profile: "chill" (lenient) or "assertive" (strict)
+  profile: "chill"
+  # Tools to enable (e.g., linters)
+  tools:
+    pylint:
+      enabled: true # Python linter for Django
+      config_file: ".pylintrc" # Optional: add if you have a custom config
+    bandit:
+      enabled: true # Security analysis for Python
+
+  # Path-specific instructions
+  path_instructions:
+    - path: "**/*.py" # All Python files
+      instructions: |
+        - Ensure Django best practices (e.g., proper use of get_object_or_404, form validation).
+        - Check for security issues (e.g., raw SQL queries, CSRF protection).
+        - Suggest improvements for readability and PEP 8 compliance.
+    - path: "**/*.html" # All HTML templates
+      instructions: |
+        - Verify Django template syntax (e.g., {% url %}, {% csrf_token %}).
+        - Check for accessibility (e.g., labels for forms).
+
+# Chat settings
+chat:
+  auto_reply: true # Auto-respond to @coderabbitai mentions

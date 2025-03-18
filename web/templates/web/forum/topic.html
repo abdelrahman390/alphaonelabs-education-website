@@ -1,0 +1,116 @@
+{% extends "base.html" %}
+
+{% block title %}
+  {{ topic.title }} - Forum
+{% endblock title %}
+{% block content %}
+  <div class="container mx-auto px-4 py-8">
+    <div class="max-w-4xl mx-auto">
+      <!-- Breadcrumbs -->
+      <nav class="flex items-center space-x-2 text-sm text-gray-600 dark:text-gray-400 mb-6">
+        <a href="{% url 'forum_categories' %}"
+           class="hover:text-blue-600 dark:hover:text-blue-400">Forum</a>
+        <span class="text-gray-400 dark:text-gray-600">/</span>
+        <a href="{% url 'forum_category' topic.category.slug %}"
+           class="hover:text-blue-600 dark:hover:text-blue-400">{{ topic.category.name }}</a>
+        <span class="text-gray-400 dark:text-gray-600">/</span>
+        <span class="text-gray-800 dark:text-gray-200">{{ topic.title }}</span>
+      </nav>
+      <!-- Topic Header -->
+      <div class="mb-8">
+        <div class="flex justify-between items-start">
+          <h1 class="text-3xl font-bold">{{ topic.title }}</h1>
+          {% if user == topic.author %}
+            <a href="{% url 'edit_topic' topic.id %}"
+               class="text-gray-600 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400">
+              <i class="fas fa-edit"></i>
+              Edit
+            </a>
+          {% endif %}
+        </div>
+        <div class="flex items-center text-sm text-gray-500 dark:text-gray-400">
+          <span>Posted by {{ topic.author.get_full_name|default:topic.author.username }}</span>
+          <span class="mx-2">•</span>
+          <time datetime="{{ topic.created_at|date:'Y-m-d H:i' }}">{{ topic.created_at|timesince }} ago</time>
+        </div>
+      </div>
+      <div class="prose dark:prose-invert max-w-none">{{ topic.content|linebreaks }}</div>
+      {% if user == topic.author %}
+        <div class="mt-6 flex justify-end space-x-4">
+          <form method="post" class="inline">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="delete_topic" />
+            <button type="submit"
+                    class="text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300">Delete</button>
+          </form>
+        </div>
+      {% endif %}
+      <!-- Replies Section -->
+      <div class="space-y-6">
+        <h2 class="text-2xl font-bold">Replies</h2>
+        {% if user.is_authenticated %}
+          <!-- Reply Form -->
+          <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6 mb-8">
+            <form method="post" class="space-y-4">
+              {% csrf_token %}
+              <input type="hidden" name="action" value="add_reply" />
+              <div>
+                <label for="content" class="block text-sm font-medium mb-2">Your Reply</label>
+                <textarea name="content"
+                          id="content"
+                          rows="4"
+                          class="w-full border border-gray-300 dark:border-gray-600 rounded p-2 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800 bg-white dark:bg-gray-800"
+                          required></textarea>
+              </div>
+              <button type="submit"
+                      class="bg-teal-600 hover:bg-teal-700 text-white font-medium py-2 px-4 rounded focus:outline-none focus:ring-2 focus:ring-teal-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800">
+                Post Reply
+              </button>
+            </form>
+          </div>
+        {% else %}
+          <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6 mb-8">
+            <p class="text-gray-600 dark:text-gray-400 mb-4">Please log in to join the discussion.</p>
+            <a href="{% url 'account_login' %}?next={{ request.path }}"
+               class="inline-flex items-center bg-teal-600 hover:bg-teal-700 text-white font-medium py-2 px-4 rounded">
+              <i class="fa-solid fa-sign-in-alt mr-2"></i>
+              Log In to Reply
+            </a>
+          </div>
+        {% endif %}
+        <!-- Replies List -->
+        {% for reply in replies %}
+          <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+            <div class="flex items-start justify-between mb-4">
+              <div>
+                <span class="font-medium">{{ reply.author.get_full_name|default:reply.author.username }}</span>
+                <time datetime="{{ reply.created_at|date:'Y-m-d H:i' }}"
+                      class="text-sm text-gray-500 dark:text-gray-400 ml-2">
+                  {{ reply.created_at|timesince }} ago
+                </time>
+              </div>
+              {% if user == reply.author %}
+                <div class="flex space-x-4">
+                  <a href="{% url 'edit_reply' reply.id %}"
+                     class="text-teal-600 hover:text-teal-700 dark:text-teal-400 dark:hover:text-teal-300">Edit</a>
+                  <form method="post" class="inline">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="delete_reply" />
+                    <input type="hidden" name="reply_id" value="{{ reply.id }}" />
+                    <button type="submit"
+                            class="text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300">
+                      Delete
+                    </button>
+                  </form>
+                </div>
+              {% endif %}
+            </div>
+            <div class="prose dark:prose-invert max-w-none">{{ reply.content|linebreaks }}</div>
+          </div>
+        {% empty %}
+          <p class="text-gray-500 dark:text-gray-400">No replies yet. Be the first to reply!</p>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+{% endblock content %}

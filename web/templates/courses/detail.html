@@ -1,0 +1,538 @@
+{% extends "base.html" %}
+
+{% load static %}
+{% load markdown_filters %}
+{% load session_filters %}
+
+{% block title %}
+  {{ course.title }}
+{% endblock title %}
+{% block extra_head %}
+  <!-- Share dropdown -->
+  <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
+{% endblock extra_head %}
+{% block content %}
+  <div class="container mx-auto px-4 py-8">
+    <!-- Breadcrumbs -->
+    <nav class="text-sm mb-4">
+      <a href="{% url 'course_search' %}"
+         class="text-blue-600 hover:text-blue-800">Courses</a>
+      <span class="mx-2">/</span>
+      <span class="text-gray-600">{{ course.title }}</span>
+    </nav>
+    <!-- Course Header Section -->
+    <div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg overflow-hidden">
+      <div class="p-6">
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+          <!-- Left Column - Image and Quick Info -->
+          <div class="space-y-4">
+            <div class="aspect-square w-full relative overflow-hidden rounded-lg shadow-md">
+              {% if course.image %}
+                <img src="{{ course.image.url }}"
+                     alt="{{ course.title }}"
+                     class="w-full h-full object-cover" />
+              {% else %}
+                <img src="{% static 'images/default-course.jpg' %}"
+                     alt="{{ course.title }}"
+                     class="w-full h-full object-cover" />
+              {% endif %}
+            </div>
+            <!-- Quick Stats -->
+            <div class="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 space-y-3">
+              <div class="flex items-center justify-between">
+                <span class="text-gray-600 dark:text-gray-300">Price</span>
+                <span class="text-3xl font-bold text-teal-600 dark:text-teal-400">${{ course.price }}</span>
+              </div>
+              <div class="flex items-center justify-between">
+                <span class="text-gray-600 dark:text-gray-300">Level</span>
+                <span class="font-medium">{{ course.get_level_display }}</span>
+              </div>
+              <div class="flex items-center justify-between">
+                <span class="text-gray-600 dark:text-gray-300">Students</span>
+                <span class="font-medium">{{ course.enrollments.count }} / {{ course.max_students }}</span>
+              </div>
+              <div class="flex items-center justify-between">
+                <span class="text-gray-600 dark:text-gray-300">Rating</span>
+                <span class="font-medium">
+                  <i class="fas fa-star text-yellow-400"></i>
+                  {{ course.average_rating|default:"No ratings yet" }}
+                </span>
+              </div>
+              {% if not is_enrolled %}
+                {% if course.invite_only %}
+                  <div class="flex items-center justify-between text-indigo-600 dark:text-indigo-400">
+                    <span class="text-sm">
+                      <i class="fas fa-lock mr-1"></i>
+                      Invite Only
+                    </span>
+                  </div>
+                {% else %}
+                  <form method="post"
+                        action="{% url 'add_course_to_cart' course.id %}"
+                        class="mt-2">
+                    {% csrf_token %}
+                    <button type="submit"
+                            class="w-full bg-orange-500 hover:bg-orange-600 text-white font-semibold py-3 px-4 rounded-lg flex items-center justify-center">
+                      <i class="fas fa-cart-plus mr-2"></i>
+                      Add to Cart
+                    </button>
+                  </form>
+                {% endif %}
+              {% endif %}
+            </div>
+            <!-- Course Creator Info -->
+            <div class="bg-gray-50 dark:bg-gray-700 rounded-lg p-4">
+              <h3 class="font-semibold mb-3">Course Creator</h3>
+              <div class="flex items-center space-x-3">
+                {% if course.teacher.profile.avatar %}
+                  <img src="{{ course.teacher.profile.avatar.url }}"
+                       alt="{{ course.teacher.get_full_name }}"
+                       class="w-12 h-12 rounded-full"
+                       width="48"
+                       height="48" />
+                {% else %}
+                  <img src="{% static 'images/default_teacher.png' %}"
+                       alt="{{ course.teacher.get_full_name }}"
+                       class="w-12 h-12 rounded-full"
+                       width="48"
+                       height="48" />
+                {% endif %}
+                <div>
+                  <p class="font-medium">{{ course.teacher.get_full_name|default:course.teacher.username }}</p>
+                  {% if course.teacher.profile.expertise %}
+                    <p class="text-sm text-gray-600 dark:text-gray-400">{{ course.teacher.profile.expertise }}</p>
+                  {% endif %}
+                  <a href="{% url 'message_teacher' course.teacher.id %}"
+                     class="inline-flex items-center mt-2 text-sm text-blue-600 hover:text-blue-800 dark:text-blue-400">
+                    <i class="fas fa-envelope mr-1"></i>
+                    Message Teacher
+                  </a>
+                </div>
+              </div>
+            </div>
+            <!-- Course Sessions -->
+            <div class="bg-gray-50 dark:bg-gray-700 rounded-lg">
+              <div class="p-4">
+                <div class="flex justify-between items-center mb-4">
+                  <h2 class="text-lg font-bold">Course Sessions</h2>
+                  {% if user == course.teacher %}
+                    <div class="flex space-x-2">
+                      <a href="{% url 'add_session' course.slug %}"
+                         class="bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-4 py-2 rounded-lg transition duration-200">
+                        <i class="fas fa-plus mr-1"></i>
+                        Add Session
+                      </a>
+                      {% with rolled_sessions=course.sessions.all %}
+                        {% if rolled_sessions|filter_rolled_over %}
+                          <a href="{% url 'confirm_rolled_sessions' course.slug %}"
+                             class="bg-yellow-600 hover:bg-yellow-700 text-white text-sm font-medium px-4 py-2 rounded-lg transition duration-200">
+                            <i class="fas fa-clock mr-1"></i>
+                            Confirm Rolled Sessions
+                          </a>
+                        {% endif %}
+                      {% endwith %}
+                    </div>
+                  {% endif %}
+                </div>
+                {% if course.allow_individual_sessions %}
+                  <div class="mb-4 text-sm text-gray-600 dark:text-gray-400 flex items-center">
+                    <i class="fas fa-info-circle mr-2"></i>
+                    This course allows for individual session payments
+                  </div>
+                {% endif %}
+                {% if sessions %}
+                  <div class="space-y-3">
+                    {% for session in sessions %}
+                      <div class="border dark:border-gray-700 rounded-lg p-3 {% if session.end_time < now %}bg-gray-100 dark:bg-gray-700{% endif %}">
+                        <div class="space-y-2">
+                          <h3 class="text-sm font-semibold">{{ session.title }}</h3>
+                          <div class="text-xs text-gray-600 dark:text-gray-400 space-y-1">
+                            <div class="flex items-center">
+                              <i class="far fa-calendar mr-2"></i>
+                              {{ session.start_time|date:"M d, Y" }}
+                            </div>
+                            <div class="flex items-center">
+                              <i class="far fa-clock mr-2"></i>
+                              {{ session.start_time|time }} - {{ session.end_time|time }}
+                            </div>
+                            {% if session.is_virtual %}
+                              <div class="flex items-center text-blue-600 dark:text-blue-400">
+                                <i class="fas fa-video mr-2"></i>
+                                Virtual
+                              </div>
+                            {% endif %}
+                            <div class="flex items-center text-green-600 dark:text-green-400">
+                              <i class="fas fa-location-dot mr-2"></i>
+                              {{ session.location }}
+                            </div>
+                            {% if course.allow_individual_sessions and session.price %}
+                              <div class="flex items-center text-orange-600 dark:text-orange-400 font-semibold">
+                                <i class="fas fa-tag mr-2"></i>
+                                ${{ session.price|floatformat:2 }}
+                              </div>
+                            {% endif %}
+                          </div>
+                        </div>
+                        <div class="mt-2 flex flex-wrap gap-2 text-xs">
+                          {% if is_teacher or is_enrolled %}
+                            {% if is_teacher %}
+                              <a href="{% url 'mark_session_attendance' session.id %}"
+                                 class="text-teal-600 hover:text-teal-700 dark:text-teal-400">
+                                <i class="fas fa-clipboard-list mr-1"></i>
+                                Attendance
+                              </a>
+                              <a href="{% url 'edit_session' session.id %}"
+                                 class="text-blue-600 hover:text-blue-700 dark:text-blue-400">
+                                <i class="fas fa-edit mr-1"></i>
+                                Edit
+                              </a>
+                            {% elif is_enrolled %}
+                              {% if session.end_time < now %}
+                                {% if session in completed_sessions %}
+                                  <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
+                                    <i class="fas fa-check mr-1"></i>
+                                    Completed
+                                  </span>
+                                {% else %}
+                                  <form method="post"
+                                        action="{% url 'mark_session_completed' session.id %}"
+                                        class="inline">
+                                    {% csrf_token %}
+                                    <button type="submit"
+                                            class="text-blue-600 hover:text-blue-700 dark:text-blue-400">
+                                      <i class="fas fa-check-circle mr-1"></i>
+                                      Complete
+                                    </button>
+                                  </form>
+                                {% endif %}
+                              {% endif %}
+                            {% endif %}
+                          {% elif course.allow_individual_sessions and session.price and not is_enrolled %}
+                            {% if course.invite_only %}
+                              <div class="flex items-center justify-between text-indigo-600 dark:text-indigo-400">
+                                <span class="text-sm">
+                                  <i class="fas fa-lock mr-1"></i>
+                                  Invite Only
+                                </span>
+                              </div>
+                            {% elif session.end_time >= now %}
+                              <form method="post"
+                                    action="{% url 'add_session_to_cart' session.id %}"
+                                    class="inline">
+                                {% csrf_token %}
+                                <button type="submit"
+                                        class="bg-orange-500 hover:bg-orange-600 text-white px-3 py-1.5 rounded text-xs font-medium w-full">
+                                  <i class="fas fa-cart-plus mr-1"></i>
+                                  Add to Cart
+                                </button>
+                              </form>
+                            {% else %}
+                              <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300">
+                                <i class="fas fa-clock-rotate-left mr-1"></i>
+                                Past Session
+                              </span>
+                            {% endif %}
+                          {% endif %}
+                          {% if session.is_virtual and session.meeting_link and session.end_time >= now %}
+                            <a href="{{ session.meeting_link }}"
+                               target="_blank"
+                               class="text-blue-600 hover:text-blue-700 dark:text-blue-400">
+                              <i class="fas fa-video mr-1"></i>
+                              Join
+                            </a>
+                          {% endif %}
+                          <a href="{% url 'calendar_links' session.id %}"
+                             class="text-gray-600 hover:text-gray-700 dark:text-gray-400">
+                            <i class="fas fa-calendar-plus mr-1"></i>
+                            Calendar
+                          </a>
+                        </div>
+                      </div>
+                    {% endfor %}
+                  </div>
+                {% else %}
+                  <p class="text-sm text-gray-600 dark:text-gray-400">No sessions scheduled yet.</p>
+                {% endif %}
+              </div>
+              <!-- Calendar -->
+              <div class="mt-6 border-t dark:border-gray-600 pt-4">
+                <div class="flex items-center justify-between mb-3">
+                  <h3 class="text-sm font-semibold">Session Calendar</h3>
+                  <div class="flex items-center space-x-4">
+                    <button onclick="loadCalendar({{ prev_month.year }}, {{ prev_month.month }})"
+                            class="text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200">
+                      <i class="fas fa-chevron-left"></i>
+                    </button>
+                    <span class="text-sm font-medium" id="current-month">{{ current_month|date:"F Y" }}</span>
+                    <button onclick="loadCalendar({{ next_month.year }}, {{ next_month.month }})"
+                            class="text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200">
+                      <i class="fas fa-chevron-right"></i>
+                    </button>
+                  </div>
+                </div>
+                <div id="calendar-container"
+                     class="bg-white dark:bg-gray-800 rounded-lg border dark:border-gray-700 overflow-hidden">
+                  <div class="grid grid-cols-7 text-center text-xs font-medium border-b dark:border-gray-700">
+                    <div class="py-2">Sun</div>
+                    <div class="py-2">Mon</div>
+                    <div class="py-2">Tue</div>
+                    <div class="py-2">Wed</div>
+                    <div class="py-2">Thu</div>
+                    <div class="py-2">Fri</div>
+                    <div class="py-2">Sat</div>
+                  </div>
+                  <div class="grid grid-cols-7 text-center text-sm" id="calendar-grid">
+                    {% for week in calendar_weeks %}
+                      {% for day in week %}
+                        <div class="p-2 border-b border-r dark:border-gray-700 {% if day.date == today %}bg-gray-100 dark:bg-gray-700{% endif %}">
+                          {% if day.date %}
+                            <div class="relative">
+                              <span class="{% if day.has_session %}font-bold text-teal-600 dark:text-teal-400{% endif %}">
+                                {{ day.date|date:"j" }}
+                              </span>
+                              {% if day.has_session %}
+                                <div class="absolute bottom-0 left-1/2 transform -translate-x-1/2 w-1 h-1 bg-teal-500 dark:bg-teal-400 rounded-full">
+                                </div>
+                              {% endif %}
+                            </div>
+                          {% endif %}
+                        </div>
+                      {% endfor %}
+                    {% endfor %}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <!-- Middle and Right Columns - Course Info -->
+          <div class="md:col-span-2 space-y-6">
+            <div>
+              <div class="flex justify-between items-start mb-4">
+                <div class="flex items-center gap-4">
+                  <h1 class="text-3xl font-bold">{{ course.title }}</h1>
+                  {% if user == course.teacher %}
+                    <div class="flex items-center gap-3">
+                      <a href="{% url 'update_course' course.slug %}"
+                         class="inline-flex items-center px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition duration-200">
+                        <i class="fas fa-edit mr-2"></i>
+                        Edit Course
+                      </a>
+                      <a href="{% url 'course_progress_overview' course.slug %}"
+                         class="inline-flex items-center px-4 py-2 bg-orange-500 hover:bg-orange-600 text-white rounded-lg transition duration-200">
+                        <i class="fas fa-chart-line mr-2"></i>
+                        Progress Overview
+                      </a>
+                      <a href="{% url 'message_students' course.slug %}"
+                         class="inline-flex items-center px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition duration-200">
+                        <i class="fas fa-envelope mr-2"></i>
+                        Message Students
+                      </a>
+                    </div>
+                  {% endif %}
+                </div>
+                {% if user.is_authenticated and enrollment %}
+                  <div class="flex items-center gap-4">
+                    <div class="bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 px-4 py-2 rounded-lg flex items-center">
+                      <i class="fas fa-check-circle mr-2"></i>
+                      <span>You're enrolled!</span>
+                    </div>
+                    <a href="{% url 'student_dashboard' %}?course={{ course.id }}"
+                       class="bg-indigo-600 hover:bg-indigo-700 dark:bg-indigo-500 dark:hover:bg-indigo-600 text-white px-4 py-2 rounded-lg flex items-center">
+                      <i class="fas fa-chart-line mr-2"></i>
+                      <span>View Progress</span>
+                    </a>
+                  </div>
+                {% endif %}
+                <!-- Share Button -->
+                <div class="relative ml-2" x-data="{ open: false }">
+                  <button class="bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 p-2 rounded-full"
+                          @click="open = !open">
+                    <i class="fas fa-share-alt text-gray-600 dark:text-gray-300"></i>
+                  </button>
+                  <div class="absolute right-0 mt-2 w-48 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 z-10"
+                       x-show="open"
+                       @click.away="open = false">
+                    <div class="p-2 space-y-1">
+                      <a href="https://twitter.com/intent/tweet?text=Check%20out%20this%20course%3A%20{{ course.title|urlencode }}&url={{ request.build_absolute_uri|urlencode }}"
+                         target="_blank"
+                         class="flex items-center p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded">
+                        <i class="fab fa-twitter text-blue-400 mr-2"></i>
+                        <span class="text-sm">Share on Twitter</span>
+                      </a>
+                      <a href="https://www.facebook.com/sharer/sharer.php?u={{ request.build_absolute_uri|urlencode }}"
+                         target="_blank"
+                         class="flex items-center p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded">
+                        <i class="fab fa-facebook text-blue-600 mr-2"></i>
+                        <span class="text-sm">Share on Facebook</span>
+                      </a>
+                      <a href="https://www.linkedin.com/sharing/share-offsite/?url={{ request.build_absolute_uri|urlencode }}"
+                         target="_blank"
+                         class="flex items-center p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded">
+                        <i class="fab fa-linkedin text-blue-700 mr-2"></i>
+                        <span class="text-sm">Share on LinkedIn</span>
+                      </a>
+                      <button class="w-full flex items-center p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded"
+                              @click="navigator.clipboard.writeText('{{ request.build_absolute_uri }}'); $dispatch('notification', {message: 'Link copied!'})">
+                        <i class="fas fa-link text-gray-600 dark:text-gray-400 mr-2"></i>
+                        <span class="text-sm">Copy Link</span>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div class="flex items-center space-x-4 mb-4">
+                <span class="badge bg-{{ course.status }}">{{ course.get_status_display }}</span>
+                <span class="text-sm text-gray-600 dark:text-gray-400">{{ course.subject.name }}</span>
+                {% if course.tags %}<span class="text-sm text-gray-600 dark:text-gray-400">{{ course.tags }}</span>{% endif %}
+              </div>
+              <!-- Course Description -->
+              <div class="markdown-content space-y-6 text-gray-800 dark:text-gray-200">
+                <div class="space-y-4">
+                  <!-- Course Materials -->
+                  <div class="mt-8">
+                    <div class="flex justify-between items-center mb-4">
+                      <h2 class="text-xl font-bold">Course Materials</h2>
+                      {% if user == course.teacher %}
+                        <a href="{% url 'upload_material' course.slug %}"
+                           class="bg-teal-500 hover:bg-teal-600 text-white px-3 py-1 rounded-lg transition duration-200 text-sm">
+                          <i class="fas fa-plus mr-1"></i>Add Material
+                        </a>
+                      {% endif %}
+                    </div>
+                    {% if course.materials.exists %}
+                      <div class="grid gap-4">
+                        {% for material in course.materials.all %}
+                          <div class="bg-white dark:bg-gray-700 rounded-lg p-4 shadow">
+                            <div class="flex justify-between items-start">
+                              <div>
+                                <h3 class="font-semibold">
+                                  {% if is_enrolled or not material.requires_enrollment or is_teacher %}
+                                    {% if material.external_url %}
+                                      <a href="{{ material.external_url }}"
+                                         target="_blank"
+                                         class="text-blue-600 hover:text-blue-800 dark:text-blue-400">
+                                        {{ material.title }}
+                                        <i class="fas fa-external-link-alt ml-1 text-sm"></i>
+                                      </a>
+                                    {% else %}
+                                      <a href="{% url 'download_material' course.slug material.id %}"
+                                         class="text-blue-600 hover:text-blue-800 dark:text-blue-400">
+                                        {{ material.title }}
+                                        <i class="fas fa-download ml-1 text-sm"></i>
+                                      </a>
+                                    {% endif %}
+                                  {% else %}
+                                    {{ material.preview_content }}
+                                    <span class="ml-2 text-sm text-gray-500">(Enroll to access)</span>
+                                  {% endif %}
+                                </h3>
+                                {% if material.description %}
+                                  <p class="text-sm text-gray-600 dark:text-gray-300 mt-1">{{ material.description }}</p>
+                                {% endif %}
+                              </div>
+                              {% if user == course.teacher %}
+                                <div class="flex space-x-2">
+                                  <a href="{% url 'delete_material' course.slug material.id %}"
+                                     class="text-red-600 hover:text-red-800 dark:text-red-400">
+                                    <i class="fas fa-trash"></i>
+                                  </a>
+                                </div>
+                              {% endif %}
+                            </div>
+                            <div class="flex items-center mt-2 text-sm text-gray-500 dark:text-gray-400">
+                              <span class="flex items-center">
+                                <i class="fas {% if material.material_type == 'video' %}fa-video{% elif material.material_type == 'image' %}fa-image{% elif material.material_type == 'document' %}fa-file-alt{% elif material.material_type == 'presentation' %}fa-file-powerpoint{% elif material.material_type == 'exercise' %}fa-tasks{% elif material.material_type == 'quiz' %}fa-question-circle{% else %}fa-file{% endif %} mr-1"></i>
+                                {{ material.get_material_type_display }}
+                              </span>
+                              {% if material.session %}
+                                <span class="mx-2">•</span>
+                                <span class="flex items-center">
+                                  <i class="far fa-calendar-alt mr-1"></i>
+                                  Session: {{ material.session.title }}
+                                </span>
+                              {% endif %}
+                            </div>
+                          </div>
+                        {% endfor %}
+                      </div>
+                    {% else %}
+                      <p class="text-gray-600 dark:text-gray-400">No materials available yet.</p>
+                    {% endif %}
+                  </div>
+                  <!-- Schedule -->
+                  <div>
+                    <h2 class="text-xl font-bold mb-2">Schedule</h2>
+                    {{ course.description|markdown }}
+                  </div>
+                  <!-- Learning Objectives -->
+                  <div class="mt-8">
+                    <h2 class="text-xl font-bold mb-2">Learning Objectives</h2>
+                    {{ course.learning_objectives|markdown }}
+                  </div>
+                  <!-- Prerequisites -->
+                  {% if course.prerequisites %}
+                    <div class="mt-8">
+                      <h2 class="text-xl font-bold mb-2">Prerequisites</h2>
+                      {{ course.prerequisites|markdown }}
+                    </div>
+                  {% endif %}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <!-- Notification -->
+  <div x-data="{ show: false, message: '' }"
+       @notification.window="show = true; message = $event.detail.message; setTimeout(() => show = false, 2000)"
+       x-show="show"
+       x-transition
+       class="fixed bottom-4 right-4 bg-green-500 text-white px-4 py-2 rounded-lg shadow-lg">
+    <span x-text="message"></span>
+  </div>
+  <script>
+      function loadCalendar(year, month) {
+          fetch(`/courses/{{ course.slug }}/calendar/?year=${year}&month=${month}`)
+              .then(response => response.json())
+              .then(data => {
+                  // Update month display
+                  document.getElementById('current-month').textContent = data.current_month;
+
+                  // Update calendar grid
+                  const grid = document.getElementById('calendar-grid');
+                  let html = '';
+
+                  data.calendar_weeks.forEach(week => {
+                      week.forEach(day => {
+                          const today = day.is_today ? 'bg-gray-100 dark:bg-gray-700' : '';
+                          html += `
+              <div class="p-2 border-b border-r dark:border-gray-700 ${today}">
+                ${day.date ? `
+                  <div class="relative">
+                    <span class="${day.has_session ? 'font-bold text-teal-600 dark:text-teal-400' : ''}">
+                      ${new Date(day.date).getDate()}
+                    </span>
+                    ${day.has_session ? `
+                      <div class="absolute bottom-0 left-1/2 transform -translate-x-1/2 w-1 h-1 bg-teal-500 dark:bg-teal-400 rounded-full"></div>
+                    ` : ''}
+                  </div>
+                ` : ''}
+              </div>
+            `;
+                      });
+                  });
+
+                  grid.innerHTML = html;
+
+                  // Update navigation buttons
+                  const prevButton = grid.parentElement.previousElementSibling.querySelector('button:first-child');
+                  const nextButton = grid.parentElement.previousElementSibling.querySelector('button:last-child');
+                  prevButton.onclick = () => loadCalendar(data.prev_month.year, data.prev_month.month);
+                  nextButton.onclick = () => loadCalendar(data.next_month.year, data.next_month.month);
+              })
+              .catch(error => console.error('Error loading calendar:', error));
+      }
+  </script>
+{% endblock content %}

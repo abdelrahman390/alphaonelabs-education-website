@@ -1,0 +1,90 @@
+{% extends "base.html" %} {% block content %}
+<div class="container flex gap-5 flex-col mx-auto max-w-2xl px-6 py-10">
+	<!-- Title -->
+	<h1 class="text-3xl font-bold text-gray-900 dark:text-white text-center mb-4"
+		>Available Challenges</h1
+	>
+	<!-- Weekly Challenge -->
+	<div
+		class="border border-gray-200 dark:border-gray-700 rounded-lg p-6 shadow-lg bg-white dark:bg-gray-800"
+	>
+		<h2 class="text-xl font-semibold mb-4 flex items-center">
+			<span class="mr-2">🏆</span> Weekly Challenge
+		</h2>
+		{% if current_challenge %}
+		<div class="text-left">
+			<p class="text-lg font-semibold mb-2">Challenge Name:</p>
+			<p class="text-gray-700 dark:text-gray-300 mb-4"
+				>{{ current_challenge.title }}</p
+			>
+			<p class="text-lg font-semibold mb-2">Details:</p>
+			<p class="text-gray-700 dark:text-gray-300 mb-4"
+				>{{ current_challenge.description }}</p
+			>
+			<p class="text-lg font-semibold mb-2">Duration:</p>
+			<p class="text-gray-600 dark:text-gray-400 mb-6">
+				{{ current_challenge.start_date }} to {{ current_challenge.end_date }}
+			</p>
+			{% if user.is_authenticated %}
+			<a
+				href="{% url 'weekly_challenge_submit' current_challenge.challenge_type current_challenge.week_number %}"
+				class="inline-block bg-teal-600 text-white px-5 py-2.5 rounded-lg hover:bg-teal-700 transition-shadow shadow-md"
+			>
+				Complete My Challenge
+			</a>
+			{% else %}
+			<p class="text-red-600 dark:text-red-400 mt-4"
+				>Please log in to submit your result.</p
+			>
+			{% endif %}
+		</div>
+		{% else %}
+		<p class="text-left text-gray-500 dark:text-gray-400"
+			>No challenge available for this week.</p
+		>
+		{% endif %}
+	</div>
+	<!-- one time challenges -->
+	<div
+		class="border border-gray-200 dark:border-gray-700 rounded-lg p-6 shadow-lg bg-white dark:bg-gray-800"
+	>
+		<h2 class="text-xl font-semibold mb-4 flex items-center">
+			<span class="mr-2">⚡</span>One-time Challenges
+		</h2>
+		{% if current_one_time_challenge %}
+		<div class="text-left">
+			<p class="text-lg font-semibold mb-2">Challenge Name:</p>
+			<p class="text-gray-700 dark:text-gray-300 mb-4"
+				>{{ current_one_time_challenge.title }}</p
+			>
+			<p class="text-lg font-semibold mb-2">Details:</p>
+			<p class="text-gray-700 dark:text-gray-300 mb-4"
+				>{{ current_one_time_challenge.description }}</p
+			>
+			<p class="text-lg font-semibold mb-2">Duration:</p>
+			<p class="text-gray-600 dark:text-gray-400 mb-6">
+				{{ current_one_time_challenge.start_date }} to
+				{{current_one_time_challenge.end_date}}
+			</p>
+			<h3></h3>
+			{% if user.is_authenticated %}
+			<a
+				href="{% url 'One_time_challenge_submit' current_one_time_challenge.challenge_type  %}"
+				class="inline-block bg-teal-600 text-white px-5 py-2.5 rounded-lg hover:bg-teal-700 transition-shadow shadow-md"
+			>
+				Complete my Challenge
+			</a>
+			{% else %}
+			<p class="text-red-600 dark:text-red-400 mt-4"
+				>Please log in to submit your result.</p
+			>
+			{% endif %}
+		</div>
+		{% else %}
+		<p class="text-left text-gray-500 dark:text-gray-400"
+			>No one-time challenges available.</p
+		>
+		{% endif %}
+	</div>
+</div>
+{% endblock content %}

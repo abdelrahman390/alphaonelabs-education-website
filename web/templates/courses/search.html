@@ -1,0 +1,239 @@
+{% extends "base.html" %}
+
+{% load static %}
+
+{% block content %}
+  <main class="flex-1 w-full max-w-[90rem] mx-auto mt-6 px-4 md:px-6">
+    <!-- Main Container: 2 columns -->
+    <div class="flex flex-col md:flex-row space-y-6 md:space-y-0 md:space-x-6">
+      <!-- Left Column: Two rows of 3 Course Cards each -->
+      <div class="md:w-3/4 space-y-6">
+        <!-- Row 1 of Courses -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+          {% for course in page_obj %}
+            <!-- Course Card -->
+            <div class="rounded-lg p-4 border border-gray-200 dark:border-gray-700">
+              <div class="aspect-square w-full relative overflow-hidden rounded-lg mb-3">
+                {% if course.image %}
+                  <a href="{% url 'course_detail' course.slug %}">
+                    <img src="{{ course.image.url }}"
+                         alt="{{ course.title }}"
+                         class="w-full h-full object-cover" />
+                  </a>
+                {% else %}
+                  <a href="{% url 'course_detail' course.slug %}">
+                    <img src="{% static 'images/default-course.jpg' %}"
+                         alt="{{ course.title }}"
+                         class="w-full h-full object-cover" />
+                  </a>
+                {% endif %}
+              </div>
+              <!-- Title and Subject -->
+              <div class="mb-3">
+                <h3 class="text-lg font-semibold h-14 flex items-start">
+                  <a href="{% url 'course_detail' course.slug %}"
+                     class="hover:text-orange-500 transition-colors duration-200 line-clamp-2">{{ course.title }}</a>
+                </h3>
+                <div class="flex items-center justify-between text-sm">
+                  <span class="font-medium text-teal-600 dark:text-teal-400">{{ course.subject }}</span>
+                  <span class="text-orange-600 dark:text-orange-500">
+                    {% if course.price == 0 %}
+                      Free
+                    {% else %}
+                      ${{ course.price }}
+                    {% endif %}
+                  </span>
+                </div>
+              </div>
+              <!-- Course Stats -->
+              <div class="grid grid-cols-2 gap-2 mb-3 text-sm">
+                <div class="flex items-center text-gray-600 dark:text-gray-300">
+                  <i class="fas fa-eye mr-2"></i>
+                  <span>{{ course.web_requests.count|default:"0" }} views</span>
+                </div>
+                <div class="flex items-center text-gray-600 dark:text-gray-300">
+                  <i class="fas fa-users mr-2"></i>
+                  <span>{{ course.enrollments.count }}/{{ course.max_students }}</span>
+                </div>
+                <div class="flex items-center text-gray-600 dark:text-gray-300">
+                  <i class="fas fa-calendar-alt mr-2"></i>
+                  <span>{{ course.sessions.count }} sessions</span>
+                </div>
+                <div class="flex items-center text-gray-600 dark:text-gray-300">
+                  <i class="fas fa-star text-yellow-400 mr-2"></i>
+                  <span>{{ course.average_rating|default:"N/A" }}</span>
+                </div>
+              </div>
+              <!-- Session Dates -->
+              <div class="mb-3 text-sm text-gray-600 dark:text-gray-300 min-h-[4rem]">
+                {% with first_session=course.sessions.first last_session=course.sessions.last %}
+                  {% if first_session and last_session %}
+                    <div class="flex items-center mb-1">
+                      <i class="fas fa-calendar-day mr-2"></i>
+                      <span>Starts: {{ first_session.start_time|date:"M j, Y" }}</span>
+                    </div>
+                    <div class="flex items-center">
+                      <i class="fas fa-calendar-check mr-2"></i>
+                      <span>Ends: {{ last_session.end_time|date:"M j, Y" }}</span>
+                    </div>
+                  {% else %}
+                    <div class="flex items-center mb-1">
+                      <i class="fas fa-calendar-day mr-2"></i>
+                      <span>No sessions scheduled</span>
+                    </div>
+                  {% endif %}
+                {% endwith %}
+              </div>
+              <!-- Teacher Info -->
+              <div class="flex items-center mb-3">
+                {% if course.teacher.profile.avatar %}
+                  <img src="{{ course.teacher.profile.avatar.url }}"
+                       alt="{{ course.teacher.get_full_name|default:course.teacher.username }}"
+                       class="h-12 w-12 rounded-full mr-3"
+                       width="48"
+                       height="48" />
+                {% else %}
+                  <img src="{% static 'images/default_teacher.png' %}"
+                       alt="{{ course.teacher.get_full_name|default:course.teacher.username }}"
+                       class="h-12 w-12 rounded-full mr-3"
+                       width="48"
+                       height="48" />
+                {% endif %}
+                <div>
+                  <span class="text-sm font-medium">{{ course.teacher.get_full_name|default:course.teacher.username }}</span>
+                  {% if course.teacher.profile.expertise %}
+                    <p class="text-xs text-gray-600 dark:text-gray-400">{{ course.teacher.profile.expertise }}</p>
+                  {% endif %}
+                </div>
+              </div>
+              <!-- Action Button -->
+              {% if course.invite_only %}
+                <div class="text-xs text-indigo-600 dark:text-indigo-400 text-center">
+                  <i class="fas fa-lock mr-1"></i>
+                  Invite Only
+                </div>
+              {% else %}
+                <form method="post" action="{% url 'add_course_to_cart' course.id %}">
+                  {% csrf_token %}
+                  <button type="submit"
+                          class="w-full bg-orange-500 hover:bg-orange-600 text-white font-semibold px-3 py-2 rounded-lg flex items-center justify-center">
+                    <i class="fas fa-cart-plus mr-2"></i>
+                    Add to Cart
+                  </button>
+                </form>
+              {% endif %}
+            </div>
+          {% empty %}
+            <p>
+              No courses found. Try searching for a different subject or level. or check back later for new courses! you can also <a href="{% url 'create_course' %}"
+    class="text-orange-500 hover:text-orange-600 underline transition-colors duration-200">create a course</a> if you are a teacher. or see a list of subjects or add subjects <a href="{% url 'subjects' %}"
+    class="text-orange-500 hover:text-orange-600 underline transition-colors duration-200">here</a>
+            </p>
+          {% endfor %}
+        </div>
+        <!-- Pagination -->
+        {% if page_obj.paginator.num_pages > 1 %}
+          <div class="flex justify-center mt-6">
+            <nav class="inline-flex rounded-md shadow">
+              {% if page_obj.has_previous %}
+                <a href="?page={{ page_obj.previous_page_number }}&q={{ query }}&subject={{ subject }}&level={{ level }}&min_price={{ min_price }}&max_price={{ max_price }}&sort={{ sort_by }}"
+                   class="px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-l-md hover:bg-gray-50">
+                  Previous
+                </a>
+              {% endif %}
+              {% for num in page_obj.paginator.page_range %}
+                {% if num == page_obj.number %}
+                  <span class="px-3 py-2 text-sm font-medium text-white bg-orange-500 border border-orange-500">{{ num }}</span>
+                {% else %}
+                  <a href="?page={{ num }}&q={{ query }}&subject={{ subject }}&level={{ level }}&min_price={{ min_price }}&max_price={{ max_price }}&sort={{ sort_by }}"
+                     class="px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 hover:bg-gray-50">
+                    {{ num }}
+                  </a>
+                {% endif %}
+              {% endfor %}
+              {% if page_obj.has_next %}
+                <a href="?page={{ page_obj.next_page_number }}&q={{ query }}&subject={{ subject }}&level={{ level }}&min_price={{ min_price }}&max_price={{ max_price }}&sort={{ sort_by }}"
+                   class="px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-r-md hover:bg-gray-50">
+                  Next
+                </a>
+              {% endif %}
+            </nav>
+          </div>
+        {% endif %}
+      </div>
+      <!-- Right Column: Filters -->
+      <div class="md:w-1/4 space-y-6">
+        <div class="border border-gray-200 dark:border-gray-700 rounded-lg p-4 bg-white dark:bg-gray-800">
+          <h3 class="text-lg font-semibold mb-4">Filters</h3>
+          <form class="space-y-4" method="get" id="searchForm">
+            <!-- Search -->
+            <div>
+              <label for="q" class="block text-sm font-medium mb-1">Search</label>
+              <input type="text"
+                     id="q"
+                     name="q"
+                     class="block w-full border border-gray-300 dark:border-gray-600 rounded p-2 focus:outline-none focus:ring-2 focus:ring-teal-300 dark:focus:ring-teal-800 bg-white dark:bg-gray-800"
+                     placeholder="Search courses..." />
+            </div>
+            <!-- Subject -->
+            <div>
+              <label for="subject" class="block text-sm font-medium mb-1">Subject</label>
+              <select id="subject"
+                      name="subject"
+                      class="block w-full border border-gray-300 dark:border-gray-600 rounded p-2 focus:outline-none focus:ring-2 focus:ring-teal-300 dark:focus:ring-teal-800 bg-white dark:bg-gray-800">
+                <option value="">All Subjects</option>
+                {% for value, label in subject_choices %}
+                  <option value="{{ value }}" {% if value == subject %}selected{% endif %}>{{ label }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <!-- Level -->
+            <div>
+              <label for="level" class="block text-sm font-medium mb-1">Level</label>
+              <select id="level"
+                      name="level"
+                      class="block w-full border border-gray-300 dark:border-gray-600 rounded p-2 focus:outline-none focus:ring-2 focus:ring-teal-300 dark:focus:ring-teal-800 bg-white dark:bg-gray-800">
+                <option value="">All Levels</option>
+                {% for value, label in level_choices %}
+                  <option value="{{ value }}" {% if value == level %}selected{% endif %}>{{ label }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <!-- Price Range -->
+            <div>
+              <label class="block text-sm font-medium mb-1">Price Range</label>
+              <div class="flex space-x-2">
+                <input type="number"
+                       name="min_price"
+                       class="w-full border border-gray-300 dark:border-gray-600 rounded p-2 focus:outline-none focus:ring-2 focus:ring-teal-300 dark:focus:ring-teal-800 bg-white dark:bg-gray-800"
+                       placeholder="Min" />
+                <input type="number"
+                       name="max_price"
+                       class="w-full border border-gray-300 dark:border-gray-600 rounded p-2 focus:outline-none focus:ring-2 focus:ring-teal-300 dark:focus:ring-teal-800 bg-white dark:bg-gray-800"
+                       placeholder="Max" />
+              </div>
+            </div>
+            <!-- Sort By -->
+            <div>
+              <label for="sort" class="block text-sm font-medium mb-1">Sort By</label>
+              <select id="sort"
+                      name="sort"
+                      class="block w-full border border-gray-300 dark:border-gray-600 rounded p-2 focus:outline-none focus:ring-2 focus:ring-teal-300 dark:focus:ring-teal-800 bg-white dark:bg-gray-800">
+                <option value="-created_at">Newest</option>
+                <option value="price">Price: Low to High</option>
+                <option value="-price">Price: High to Low</option>
+                <option value="title">Title</option>
+                <option value="rating">Rating</option>
+              </select>
+            </div>
+            <!-- Submit Button -->
+            <button type="submit"
+                    class="bg-orange-500 hover:bg-orange-600 text-white font-semibold px-4 py-2 rounded-full flex items-center">
+              <i class="fa-solid fa-arrow-right-to-bracket mr-2"></i> Apply
+            </button>
+          </form>
+        </div>
+      </div>
+    </div>
+  </main>
+{% endblock content %}
