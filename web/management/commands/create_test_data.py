@@ -141,20 +141,24 @@ class Command(BaseCommand):
                 for challenge in completed_challenges:
                     Points.objects.create(
                         user=student,
-                        points=score,  # Use points instead of score
-                        weekly_points=weekly_points,
-                        monthly_points=monthly_points,
-                        challenge_count=challenge_count,
-                        current_streak=current_streak,
-                        highest_streak=highest_streak,
-                        challenge=challenges[0] if challenges else None,
+                        amount=score,         # Use amount instead of points/weekly_points etc.
+                        score=score,          # Set both fields
+                        reason=f"Completed challenge {challenge.week_number}",
+                        challenge=challenge,
+                    )
+                    Points.objects.create(
+                        user=student,
+                        amount=0,             # No points for the streak record
+                        score=0,              # No points for the streak record
+                        reason=f"Streak update: {current_streak}",
+                        challenge=None,
                     )
                     self.stdout.write(f"Created submission for {student.username} - Challenge {challenge.week_number}")
 
         # Create friend connections for leaderboards
         for student in students:
             # Create friend leaderboard for each student
-            friend_board = Points.objects.create(user=student)
+            # friend_board = Points.objects.create(user=student)
 
             # Add random friends (from students already connected via PeerConnection)
             connected_peers = list(
@@ -167,9 +171,15 @@ class Command(BaseCommand):
                     friends.append(connection.receiver)
                 else:
                     friends.append(connection.sender)
-
-            friend_board.friends.add(*friends)
-            self.stdout.write(f"Created friend leaderboard for {student.username} with {len(friends)} friends")
+            if friends:
+                Points.objects.create(
+                    user=student,
+                    amount=len(friends),  # Points for friend connections
+                    score=len(friends),
+                    reason=f"Connected with {len(friends)} peers",
+                    challenge=None,
+                )
+                self.stdout.write(f"Created friend record for {student.username} with {len(friends)} friends")
 
         # Create entries for existing users
         users = User.objects.all()
@@ -178,12 +188,9 @@ class Command(BaseCommand):
             score = random.randint(100, 1000)
             Points.objects.create(
                 user=user,
-                points=score,  # Change score to points
-                weekly_points=random.randint(0, 100),
-                monthly_points=random.randint(0, 300),
-                challenge_count=random.randint(0, 10),
-                current_streak=random.randint(0, 5),
-                highest_streak=random.randint(0, 8),
+                amount=score,
+                score=score,
+                reason=f"Test data - Random points",
                 challenge=challenges[0] if challenges else None,
             )
 
