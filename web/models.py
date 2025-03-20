@@ -1177,7 +1177,7 @@ class ChallengeSubmission(models.Model):
             Points.objects.create(
                 user=self.user,
                 challenge=self.challenge,
-                amount=self.points_awarded,  # Use amount field instead of score
+                amount=self.points_awarded,
                 reason=f"Completed challenge: Week {self.challenge.week_number}"
             )
             # Update leaderboard when a new submission is created

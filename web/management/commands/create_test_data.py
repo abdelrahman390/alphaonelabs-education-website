@@ -125,13 +125,13 @@ class Command(BaseCommand):
         for student in students:
             # Create a leaderboard entry for each student
             score = random.randint(0, 500)
-            weekly_points = random.randint(0, 100)
+            week_number = random.randint(0, 100)
             monthly_points = random.randint(0, 300)
             challenge_count = random.randint(0, 10)
             current_streak = random.randint(0, 5)
             highest_streak = max(current_streak, random.randint(current_streak, 8))
 
-            self.stdout.write(f"Created leaderboard entry for {student.username} with {score} points, weakly points: {weekly_points}, monthly points: {monthly_points}")
+            self.stdout.write(f"Created leaderboard entry for {student.username} with {score} points, weakly points: {week_number}, monthly points: {monthly_points}")
 
             # Submit random challenges for this student
             challenge_list = list(Challenge.objects.all())
@@ -141,7 +141,7 @@ class Command(BaseCommand):
                     # Create an actual submission, which will create Points through the save method
                     submission = ChallengeSubmission.objects.create(
                         user=student,
-                        challenge=challenge,
+                        challenge=challenge,  
                         submission_text=f"Submission for challenge {challenge.week_number}",
                         points_awarded=random.randint(5, 20)
                     )
