@@ -3,6 +3,15 @@ from django.contrib.auth.models import User
 from django.urls import reverse
 from web.models import Points, Challenge, ChallengeSubmission
 
+'''
+To run this test run this command:  python manage.py test web.tests.test_leaderboard.
+Then login with this credentials:
+    Email: student2@example.com
+    Password: testpass123
+OR
+    Email: student2@example.com
+    Password: testpass123
+''' 
 class LeaderboardTestCase(TestCase):
     def setUp(self):
         # This runs before each test
@@ -51,17 +60,10 @@ class LeaderboardTestCase(TestCase):
         # Use the user we created in setUp
         self.client.force_login(self.test_user)
         
-        # Using reverse() to get the URL by name is better
-        # If you don't know the name, you can find it by running:
-        # python manage.py show_urls
-        try:
-            profile_url = reverse('user_profile')  # Try common URL names
-        except:
-            profile_url = '/accounts/profile/'  # Fallback to a common path
-        
-        response = self.client.get(profile_url)
+        # Add follow=True to follow the redirect
+        response = self.client.get('/profile/', follow=True)
         self.assertEqual(response.status_code, 200)
-        
+            
     def test_leaderboard_access(self):
         self.client.force_login(self.test_user)
         
