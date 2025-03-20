@@ -174,6 +174,7 @@ class Points(models.Model):
     challenge = models.ForeignKey(
         "Challenge", on_delete=models.CASCADE, null=True, blank=True, related_name="points"
     )
+    score = models.IntegerField(default=0)
     amount = models.IntegerField(default=0)
     reason = models.CharField(max_length=255, help_text="Reason for awarding points")
     awarded_at = models.DateTimeField(auto_now_add=True)
@@ -186,84 +187,84 @@ class Points(models.Model):
         ordering = ["-awarded_at"]
 
 
-class LeaderboardEntry(models.Model):
-    """
-    Tracks points earned by users for platform activities.
+# class LeaderboardEntry(models.Model):
+#     """
+#     Tracks points earned by users for platform activities.
 
-    Points are accumulated for various activities such as completing challenges,
-    with separate tracking for weekly and monthly points to enable different
-    time-based leaderboards.
-    """
+#     Points are accumulated for various activities such as completing challenges,
+#     with separate tracking for weekly and monthly points to enable different
+#     time-based leaderboards.
+#     """
 
-    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="leaderboard_entries")
-    points = models.IntegerField(default=0)
-    score = models.IntegerField(default=0)
-    weekly_points = models.IntegerField(default=0)
-    monthly_points = models.IntegerField(default=0)
-    challenge_count = models.IntegerField(default=0)
-    current_streak = models.IntegerField(default=0)
-    highest_streak = models.IntegerField(default=0)
-    challenge = models.ForeignKey(
-        "Challenge", on_delete=models.CASCADE, null=True, blank=True, related_name="leaderboard_entries"
-    )
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
+#     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="leaderboard_entries")
+#     points = models.IntegerField(default=0)
+#     score = models.IntegerField(default=0)
+#     weekly_points = models.IntegerField(default=0)
+#     monthly_points = models.IntegerField(default=0)
+#     challenge_count = models.IntegerField(default=0)
+#     current_streak = models.IntegerField(default=0)
+#     highest_streak = models.IntegerField(default=0)
+#     challenge = models.ForeignKey(
+#         "Challenge", on_delete=models.CASCADE, null=True, blank=True, related_name="leaderboard_entries"
+#     )
+#     created_at = models.DateTimeField(auto_now_add=True)
+#     updated_at = models.DateTimeField(auto_now=True)
 
-    # Property methods for backward compatibility
-    @property
-    def points(self):
-        return self.score
+#     # Property methods for backward compatibility
+#     @property
+#     def points(self):
+#         return self.score
 
-    @points.setter
-    def points(self, value):
-        self.score = value
+#     @points.setter
+#     def points(self, value):
+#         self.score = value
 
-    @property
-    def weekly_points(self):
-        return self.score
+#     @property
+#     def weekly_points(self):
+#         return self.score
 
-    @weekly_points.setter
-    def weekly_points(self, value):
-        self.score = value
+#     @weekly_points.setter
+#     def weekly_points(self, value):
+#         self.score = value
 
-    @property
-    def monthly_points(self):
-        return self.score
+#     @property
+#     def monthly_points(self):
+#         return self.score
 
-    @monthly_points.setter
-    def monthly_points(self, value):
-        self.score = value
+#     @monthly_points.setter
+#     def monthly_points(self, value):
+#         self.score = value
 
-    @property
-    def challenge_count(self):
-        return self.score
+#     @property
+#     def challenge_count(self):
+#         return self.score
 
-    @challenge_count.setter
-    def challenge_count(self, value):
-        self.score = value
+#     @challenge_count.setter
+#     def challenge_count(self, value):
+#         self.score = value
 
-    @property
-    def last_updated(self):
-        return self.updated_at
+#     @property
+#     def last_updated(self):
+#         return self.updated_at
 
-    class Meta:
-        verbose_name_plural = "Leaderboard Entries"
-        ordering = ["-score"]  # Changed from -points to -score
+#     class Meta:
+#         verbose_name_plural = "Leaderboard Entries"
+#         ordering = ["-score"]  # Changed from -points to -score
 
 
-class FriendLeaderboard(models.Model):
-    """
-    Manages friend connections for personalized leaderboards.
+# class FriendLeaderboard(models.Model):
+#     """
+#     Manages friend connections for personalized leaderboards.
 
-    This model allows users to compete with their friends by maintaining
-    a custom leaderboard of connected users.
-    """
+#     This model allows users to compete with their friends by maintaining
+#     a custom leaderboard of connected users.
+#     """
 
-    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name="friend_leaderboard")
-    friends = models.ManyToManyField(User, related_name="in_friend_leaderboards")
+#     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name="friend_leaderboard")
+#     friends = models.ManyToManyField(User, related_name="in_friend_leaderboards")
 
-    def __str__(self):
-        return f"{self.user.username}'s friend leaderboard"
+#     def __str__(self):
+#         return f"{self.user.username}'s friend leaderboard"
 
 
 class Course(models.Model):
@@ -1252,7 +1253,7 @@ class ChallengeSubmission(models.Model):
 
         if is_new:
             # Update leaderboard when a new submission is created
-            entry, created = LeaderboardEntry.objects.get_or_create(
+            entry, created = Points.objects.get_or_create(
                 user=self.user,
                 challenge=self.challenge  # Associate with the specific challenge
             )

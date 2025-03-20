@@ -21,9 +21,10 @@ from web.models import (
     ForumCategory,
     ForumReply,
     ForumTopic,
-    FriendLeaderboard,
     Goods,
-    LeaderboardEntry,
+    Points,
+    # FriendLeaderboard,
+    # LeaderboardEntry,
     PeerConnection,
     PeerMessage,
     ProductImage,
@@ -138,7 +139,7 @@ class Command(BaseCommand):
             if challenge_list:
                 completed_challenges = random.sample(challenge_list, min(challenge_count, len(challenge_list)))
                 for challenge in completed_challenges:
-                    LeaderboardEntry.objects.create(
+                    Points.objects.create(
                         user=student,
                         points=score,  # Use points instead of score
                         weekly_points=weekly_points,
@@ -153,7 +154,7 @@ class Command(BaseCommand):
         # Create friend connections for leaderboards
         for student in students:
             # Create friend leaderboard for each student
-            friend_board = FriendLeaderboard.objects.create(user=student)
+            friend_board = Points.objects.create(user=student)
 
             # Add random friends (from students already connected via PeerConnection)
             connected_peers = list(
@@ -175,7 +176,7 @@ class Command(BaseCommand):
         for user in users:
             # Random score between 100 and 1000
             score = random.randint(100, 1000)
-            LeaderboardEntry.objects.create(
+            Points.objects.create(
                 user=user,
                 points=score,  # Change score to points
                 weekly_points=random.randint(0, 100),

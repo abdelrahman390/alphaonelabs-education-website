@@ -95,9 +95,10 @@ from .models import (
     ForumCategory,
     ForumReply,
     ForumTopic,
-    FriendLeaderboard,
     Goods,
-    LeaderboardEntry,
+    Points,
+    # FriendLeaderboard,
+    # LeaderboardEntry,
     Meme,
     Order,
     OrderItem,
@@ -116,7 +117,6 @@ from .models import (
     SuccessStory,
     TimeSlot,
     WebRequest,
-    Points
 )
 from .notifications import notify_session_reminder, notify_teacher_new_enrollment, send_enrollment_confirmation
 from .referrals import send_referral_reward_email
@@ -135,6 +135,7 @@ def sitemap(request):
 
 def index(request):
     """Homepage view."""
+    print("####################")
     # Store referral code in session if present in URL
     ref_code = request.GET.get("ref")
 
@@ -173,7 +174,8 @@ def index(request):
     latest_success_story = SuccessStory.objects.filter(status="published").order_by("-published_at").first()
 
     # Get top latest 3 leaderboard users
-    top_leaderboard_users = LeaderboardEntry.objects.select_related("user").order_by("-score")[:3]
+    top_leaderboard_users = Points.objects.select_related("user").order_by("-score")[:3]
+    print("####################", top_leaderboard_users)
 
     # Get signup form if needed
     form = None
@@ -339,80 +341,48 @@ def handle_challenge_submission(request, challenge_id):
 @login_required
 def all_leaderboards(request):
     """
-    Display all leaderboard types on a single page with separate sections.
-
-    Shows global, weekly, monthly, and friend leaderboards in one unified interface.
-    For authenticated users, calculates and displays their ranking in each category.
-
-    Args:
-        request: The HTTP request object
-
-    Returns:
-        Rendered leaderboards template with context containing all leaderboard entries
+    Display all leaderboard types on a single page using the Points model.
     """
-    # Global Leaderboard
-    global_entries = LeaderboardEntry.objects.all().order_by("-points")[:10]
-
-    # Weekly Leaderboard
-    weekly_entries = LeaderboardEntry.objects.all().order_by("-weekly_points")[:10]
-
-    # Monthly Leaderboard
-    monthly_entries = LeaderboardEntry.objects.all().order_by("-monthly_points")[:10]
-
-    # Challenge Submissions
-    challenge_entries = ChallengeSubmission.objects.select_related("user", "challenge").order_by("-points_awarded")[:10]
-
+    from .utils import calculate_user_total_points, calculate_user_weekly_points, calculate_user_monthly_points, get_leaderboard
+    
+    # Get leaderboard data
+    global_entries = get_leaderboard(period=None, limit=10)
+    weekly_entries = get_leaderboard(period='weekly', limit=10)
+    monthly_entries = get_leaderboard(period='monthly', limit=10)
+    
     # User's rank info (if authenticated)
     user_rank = None
     user_weekly_rank = None
     user_monthly_rank = None
 
     if request.user.is_authenticated:
-        try:
-            user_entry = LeaderboardEntry.objects.get(user=request.user)
-            user_rank = LeaderboardEntry.objects.filter(points__gt=user_entry.points).count() + 1
-            user_weekly_rank = LeaderboardEntry.objects.filter(weekly_points__gt=user_entry.weekly_points).count() + 1
-            user_monthly_rank = (
-                LeaderboardEntry.objects.filter(monthly_points__gt=user_entry.monthly_points).count() + 1
-            )
-        except LeaderboardEntry.DoesNotExist:
-            pass
-
-    # Friend Leaderboard (only for authenticated users)
-    friend_entries = []
-    if request.user.is_authenticated:
-        try:
-            # Get or create friend leaderboard
-            friend_board, created = FriendLeaderboard.objects.get_or_create(user=request.user)
-
-            # Get all friends from PeerConnection model
-            accepted_connections = PeerConnection.objects.filter(
-                (Q(sender=request.user) | Q(receiver=request.user)), status="accepted"
-            )
-
-            friends = []
-            for connection in accepted_connections:
-                if connection.sender == request.user:
-                    friends.append(connection.receiver)
-                else:
-                    friends.append(connection.sender)
-
-            # Update friend list
-            friend_board.friends.set(friends)
-
-            # Get leaderboard entries for friends
-            friend_entries = LeaderboardEntry.objects.filter(user__in=friend_board.friends.all()).order_by("-points")[
-                :10
-            ]
-        except Exception:
-            pass
+        # Calculate user's rank using the Points model
+        user_points = calculate_user_total_points(request.user)
+        user_weekly_points = calculate_user_weekly_points(request.user)
+        user_monthly_points = calculate_user_monthly_points(request.user)
+        
+        # Calculate rank by counting users with more points
+        user_rank = User.objects.annotate(
+            total_points=Sum('points__amount')
+        ).filter(total_points__gt=user_points).count() + 1
+        
+        user_weekly_rank = User.objects.annotate(
+            weekly_points=Sum('points__amount', filter=Q(
+                points__awarded_at__gte=timezone.now() - timedelta(days=7)
+            ))
+        ).filter(weekly_points__gt=user_weekly_points).count() + 1
+        
+        user_monthly_rank = User.objects.annotate(
+            monthly_points=Sum('points__amount', filter=Q(
+                points__awarded_at__gte=timezone.now() - timedelta(days=30)
+            ))
+        ).filter(monthly_points__gt=user_monthly_points).count() + 1
 
     context = {
         "global_entries": global_entries,
         "weekly_entries": weekly_entries,
         "monthly_entries": monthly_entries,
-        "challenge_entries": challenge_entries,
-        "friend_entries": friend_entries,
+        "challenge_entries": ChallengeSubmission.objects.select_related("user", "challenge").order_by("-points_awarded")[:10],
         "user_rank": user_rank,
         "user_weekly_rank": user_weekly_rank,
         "user_monthly_rank": user_monthly_rank,
