@@ -23,8 +23,6 @@ from web.models import (
     ForumTopic,
     Goods,
     Points,
-    # FriendLeaderboard,
-    # LeaderboardEntry,
     PeerConnection,
     PeerMessage,
     ProductImage,
@@ -141,15 +139,13 @@ class Command(BaseCommand):
                 for challenge in completed_challenges:
                     Points.objects.create(
                         user=student,
-                        amount=score,         # Use amount instead of points/weekly_points etc.
-                        # score=score,          # Set both fields
+                        amount=score,         #  instead of points/weekly_points etc.
                         reason=f"Completed challenge {challenge.week_number}",
                         challenge=challenge,
                     )
                     Points.objects.create(
                         user=student,
                         amount=0,             # No points for the streak record
-                        # score=0,              # No points for the streak record
                         reason=f"Streak update: {current_streak}",
                         challenge=None,
                     )
@@ -158,8 +154,6 @@ class Command(BaseCommand):
         # Create friend connections for leaderboards
         for student in students:
             # Create friend leaderboard for each student
-            # friend_board = Points.objects.create(user=student)
-
             # Add random friends (from students already connected via PeerConnection)
             connected_peers = list(
                 PeerConnection.objects.filter((Q(sender=student) | Q(receiver=student)), status="accepted")
@@ -175,7 +169,6 @@ class Command(BaseCommand):
                 Points.objects.create(
                     user=student,
                     amount=len(friends),  # Points for friend connections
-                    # score=len(friends),
                     reason=f"Connected with {len(friends)} peers",
                     challenge=None,
                 )
@@ -189,7 +182,6 @@ class Command(BaseCommand):
             Points.objects.create(
                 user=user,
                 amount=score,
-                # score=score,
                 reason=f"Test data - Random points",
                 challenge=challenges[0] if challenges else None,
             )
