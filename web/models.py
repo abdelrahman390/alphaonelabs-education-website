@@ -174,7 +174,8 @@ class Points(models.Model):
     challenge = models.ForeignKey(
         "Challenge", on_delete=models.CASCADE, null=True, blank=True, related_name="points"
     )
-    # score = models.IntegerField(default=0)
+    weekly_points = models.IntegerField(default=0)
+    monthly_points = models.IntegerField(default=0)
     amount = models.IntegerField(default=0)
     reason = models.CharField(max_length=255, help_text="Reason for awarding points")
     awarded_at = models.DateTimeField(auto_now_add=True)
@@ -1172,6 +1173,13 @@ class ChallengeSubmission(models.Model):
         super().save(*args, **kwargs)
 
         if is_new:
+            # Create a new Points record instead of updating
+            Points.objects.create(
+                user=self.user,
+                challenge=self.challenge,
+                amount=self.points_awarded,  # Use amount field instead of score
+                reason=f"Completed challenge: Week {self.challenge.week_number}"
+            )
             # Update leaderboard when a new submission is created
             entry, created = Points.objects.get_or_create(
                 user=self.user,

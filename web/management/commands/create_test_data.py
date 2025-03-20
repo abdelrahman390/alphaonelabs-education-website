@@ -33,6 +33,7 @@ from web.models import (
     Storefront,
     StudyGroup,
     Subject,
+    ChallengeSubmission,
 )
 
 
@@ -130,24 +131,19 @@ class Command(BaseCommand):
             current_streak = random.randint(0, 5)
             highest_streak = max(current_streak, random.randint(current_streak, 8))
 
-            self.stdout.write(f"Created leaderboard entry for {student.username} with {score} points")
+            self.stdout.write(f"Created leaderboard entry for {student.username} with {score} points, weakly points: {weekly_points}, monthly points: {monthly_points}")
 
             # Submit random challenges for this student
             challenge_list = list(Challenge.objects.all())
             if challenge_list:
                 completed_challenges = random.sample(challenge_list, min(challenge_count, len(challenge_list)))
                 for challenge in completed_challenges:
-                    Points.objects.create(
+                    # Create an actual submission, which will create Points through the save method
+                    submission = ChallengeSubmission.objects.create(
                         user=student,
-                        amount=score,         #  instead of points/weekly_points etc.
-                        reason=f"Completed challenge {challenge.week_number}",
                         challenge=challenge,
-                    )
-                    Points.objects.create(
-                        user=student,
-                        amount=0,             # No points for the streak record
-                        reason=f"Streak update: {current_streak}",
-                        challenge=None,
+                        submission_text=f"Submission for challenge {challenge.week_number}",
+                        points_awarded=random.randint(5, 20)
                     )
                     self.stdout.write(f"Created submission for {student.username} - Challenge {challenge.week_number}")
 

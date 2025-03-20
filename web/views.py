@@ -30,6 +30,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.template.loader import render_to_string
 from django.urls import NoReverseMatch, reverse, reverse_lazy
 from django.utils import timezone
+from .utils import calculate_user_total_points, calculate_user_weekly_points, calculate_user_monthly_points, get_leaderboard
 from django.utils.crypto import get_random_string
 from django.utils.html import strip_tags
 from django.views import generic
@@ -343,12 +344,15 @@ def all_leaderboards(request):
     """
     Display all leaderboard types on a single page using the Points model.
     """
-    from .utils import calculate_user_total_points, calculate_user_weekly_points, calculate_user_monthly_points, get_leaderboard
     
     # Get leaderboard data
     global_entries = get_leaderboard(period=None, limit=10)
     weekly_entries = get_leaderboard(period='weekly', limit=10)
     monthly_entries = get_leaderboard(period='monthly', limit=10)
+    # print("@@@@@@@@@@@@@@@@", request.user.username)
+    # print("@@@@@@@@@@@@@@@@", global_entries)
+    # print("@@@@@@@@@@@@@@@@", weekly_entries)
+    # print("@@@@@@@@@@@@@@@@", monthly_entries)
     
     # User's rank info (if authenticated)
     user_rank = None

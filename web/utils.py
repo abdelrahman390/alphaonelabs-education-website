@@ -65,44 +65,52 @@ def get_leaderboard(period=None, limit=10):
     Get leaderboard data based on period (None for all-time, 'weekly', or 'monthly')
     Returns a list of users with their points sorted by total points
     """
-    if period == 'weekly':
-        time_threshold = timezone.now() - timedelta(days=7)
-    elif period == 'monthly':
-        time_threshold = timezone.now() - timedelta(days=30)
-    else:
-        time_threshold = None
-    
     users = User.objects.all()
     leaderboard_data = []
     
     for user in users:
-        if time_threshold:
-            points = Points.objects.filter(
-                user=user, awarded_at__gte=time_threshold
-            ).aggregate(total=models.Sum('amount'))['total'] or 0
-        else:
-            points = Points.objects.filter(user=user).aggregate(
-                total=models.Sum('amount'))['total'] or 0
+        # Calculate all three types of points for every user
+        total_points = Points.objects.filter(user=user).aggregate(
+            total=models.Sum('amount'))['total'] or 0
+            
+        weekly_points = Points.objects.filter(
+            user=user, 
+            awarded_at__gte=timezone.now() - timedelta(days=7)
+        ).aggregate(total=models.Sum('amount'))['total'] or 0
         
-        if points > 0:  # Only include users with points
-            entry_data = {
-                'user': user,
-                'challenge_count': ChallengeSubmission.objects.filter(user=user).count()
-            }
+        monthly_points = Points.objects.filter(
+            user=user, 
+            awarded_at__gte=timezone.now() - timedelta(days=30)
+        ).aggregate(total=models.Sum('amount'))['total'] or 0
+        
+        # Count challenge submissions
+        challenge_count = ChallengeSubmission.objects.filter(user=user).count()
+        
+        # Skip users with no points for the relevant period
+        if period == 'weekly' and weekly_points <= 0:
+            continue
+        elif period == 'monthly' and monthly_points <= 0:
+            continue
+        elif period is None and total_points <= 0:
+            continue
             
-            # Set the appropriate points field based on period
-            if period == 'weekly':
-                entry_data['weekly_points'] = points
-                entry_data['points'] = points  # For backward compatibility
-            elif period == 'monthly':
-                entry_data['monthly_points'] = points
-                entry_data['points'] = points  # For backward compatibility
-            else:
-                entry_data['points'] = points
-            
-            leaderboard_data.append(entry_data)
+        # Include ALL point types in EVERY entry, regardless of period
+        entry_data = {
+            'user': user,
+            'points': total_points,
+            'weekly_points': weekly_points,
+            'monthly_points': monthly_points,
+            'challenge_count': challenge_count
+        }
+        
+        leaderboard_data.append(entry_data)
     
-    # Sort by points (descending)
-    leaderboard_data.sort(key=lambda x: x['points'], reverse=True)
+    # Sort by the appropriate points field for each leaderboard
+    if period == 'weekly':
+        leaderboard_data.sort(key=lambda x: x['weekly_points'], reverse=True)
+    elif period == 'monthly':
+        leaderboard_data.sort(key=lambda x: x['monthly_points'], reverse=True)
+    else:
+        leaderboard_data.sort(key=lambda x: x['points'], reverse=True)
     
     return leaderboard_data[:limit]
