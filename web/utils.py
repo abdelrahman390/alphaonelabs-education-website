@@ -1,6 +1,6 @@
 import requests
 from django.conf import settings
-from django.utils import timezone 
+from django.utils import timezone
 from datetime import timedelta
 from datetime import timedelta
 from django.contrib.auth.models import User
@@ -43,7 +43,6 @@ def get_or_create_cart(request):
         cart, created = Cart.objects.get_or_create(session_key=session_key)
     return cart
 
-
 def calculate_user_total_points(user):
     """Calculate total points for a user"""
     return Points.objects.filter(user=user).aggregate(total=models.Sum('amount'))['total'] or 0
@@ -67,7 +66,7 @@ def calculate_user_streak(user):
     streak_record = Points.objects.filter(
         user=user, point_type="streak"
     ).order_by('-awarded_at').first()
-    
+
     if streak_record and "Current streak:" in streak_record.reason:
         try:
             return int(streak_record.reason.split(":")[1].strip())
@@ -82,7 +81,7 @@ def get_leaderboard(period=None, limit=10):
     """
     users = User.objects.all()
     leaderboard_data = []
-    
+
     for user in users:
         # Calculate points for all time periods
         total_points = calculate_user_total_points(user)
@@ -90,7 +89,7 @@ def get_leaderboard(period=None, limit=10):
         monthly_points = calculate_user_monthly_points(user)
         current_streak = calculate_user_streak(user)
         challenge_count = ChallengeSubmission.objects.filter(user=user).count()
-        
+
         # Skip users with no points in the relevant period
         if period == 'weekly' and weekly_points <= 0:
             continue
@@ -98,7 +97,7 @@ def get_leaderboard(period=None, limit=10):
             continue
         elif period is None and total_points <= 0:
             continue
-        
+
         # Add all data for every entry
         entry_data = {
             'user': user,
@@ -108,9 +107,9 @@ def get_leaderboard(period=None, limit=10):
             'current_streak': current_streak,
             'challenge_count': challenge_count
         }
-        
+
         leaderboard_data.append(entry_data)
-    
+
     # Sort by the appropriate field based on period
     if period == 'weekly':
         leaderboard_data.sort(key=lambda x: x['weekly_points'], reverse=True)
@@ -118,5 +117,5 @@ def get_leaderboard(period=None, limit=10):
         leaderboard_data.sort(key=lambda x: x['monthly_points'], reverse=True)
     else:
         leaderboard_data.sort(key=lambda x: x['points'], reverse=True)
-    
+
     return leaderboard_data[:limit]

@@ -143,7 +143,7 @@ def index(request):
     if ref_code:
         request.session["referral_code"] = ref_code
 
-    # Get top referrers 
+    # Get top referrers
     top_referrers = Profile.objects.annotate(
         total_signups=models.Count("referrals"),
         total_enrollments=models.Count(
@@ -226,17 +226,17 @@ def signup_view(request):
 
 def handle_challenge_submission(request, challenge_id):
     challenge = get_object_or_404(Challenge, id=challenge_id)
-    
+
     # Create submission
     submission = ChallengeSubmission.objects.create(
         user=request.user,
         challenge=challenge,
         submission_text=request.POST.get('submission_text')
     )
-    
+
     # Award points
     points_amount = 10  # Default points or calculated amount
-    
+
     # Create points record
     Points.objects.create(
         user=request.user,
@@ -244,23 +244,23 @@ def handle_challenge_submission(request, challenge_id):
         amount=points_amount,
         reason=f"Completed challenge: {challenge.title}"
     )
-    
+
     # Calculate streak
     last_week_challenge = Challenge.objects.filter(week_number=challenge.week_number - 1).first()
     current_streak = 1
-    
+
     if last_week_challenge:
         last_week_submission = ChallengeSubmission.objects.filter(
             user=request.user, challenge=last_week_challenge
         ).exists()
-        
+
         if last_week_submission:
             # Get the user's most recent points entry with a streak update
             latest_streak = Points.objects.filter(
-                user=request.user, 
+                user=request.user,
                 reason__startswith="Streak update"
             ).order_by('-awarded_at').first()
-            
+
             if latest_streak:
                 # Extract streak number from reason
                 try:
@@ -269,7 +269,7 @@ def handle_challenge_submission(request, challenge_id):
                     current_streak = 2
             else:
                 current_streak = 2
-    
+
     # If streak changed, record it
     if current_streak > 1:
         Points.objects.create(
@@ -277,64 +277,7 @@ def handle_challenge_submission(request, challenge_id):
             amount=current_streak,  # Maybe award points equal to streak count
             reason=f"Streak update: {current_streak}"
         )
-    
-    return redirect('challenge_detail', challenge_id=challenge_id)
 
-
-def handle_challenge_submission(request, challenge_id):
-    challenge = get_object_or_404(Challenge, id=challenge_id)
-    
-    # Create submission
-    submission = ChallengeSubmission.objects.create(
-        user=request.user,
-        challenge=challenge,
-        submission_text=request.POST.get('submission_text')
-    )
-    
-    # Award points
-    points_amount = 10  # Default points or calculated amount
-    
-    # Create points record
-    Points.objects.create(
-        user=request.user,
-        challenge=challenge,
-        amount=points_amount,
-        reason=f"Completed challenge: {challenge.title}"
-    )
-    
-    # Calculate streak
-    last_week_challenge = Challenge.objects.filter(week_number=challenge.week_number - 1).first()
-    current_streak = 1
-    
-    if last_week_challenge:
-        last_week_submission = ChallengeSubmission.objects.filter(
-            user=request.user, challenge=last_week_challenge
-        ).exists()
-        
-        if last_week_submission:
-            # Get the user's most recent points entry with a streak update
-            latest_streak = Points.objects.filter(
-                user=request.user, 
-                reason__startswith="Streak update"
-            ).order_by('-awarded_at').first()
-            
-            if latest_streak:
-                # Extract streak number from reason
-                try:
-                    current_streak = int(latest_streak.reason.split(":")[-1].strip()) + 1
-                except (ValueError, IndexError):
-                    current_streak = 2
-            else:
-                current_streak = 2
-    
-    # If streak changed, record it
-    if current_streak > 1:
-        Points.objects.create(
-            user=request.user,
-            amount=current_streak,  # Maybe award points equal to streak count
-            reason=f"Streak update: {current_streak}"
-        )
-    
     return redirect('challenge_detail', challenge_id=challenge_id)
 
 
@@ -345,35 +288,35 @@ def all_leaderboards(request):
     Display all leaderboard types on a single page.
     """
     from .utils import get_leaderboard
-    
+
     # Get leaderboard data for different time periods
     global_entries = get_leaderboard(period=None, limit=10)
     weekly_entries = get_leaderboard(period='weekly', limit=10)
     monthly_entries = get_leaderboard(period='monthly', limit=10)
-    
+
     # Get user's rank if authenticated
     user_rank = None
     user_weekly_rank = None
     user_monthly_rank = None
-    
+
     if request.user.is_authenticated:
         from .utils import (
             calculate_user_total_points,
             calculate_user_weekly_points,
             calculate_user_monthly_points
         )
-        
+
         # Get user's points
         user_points = calculate_user_total_points(request.user)
         user_weekly_points = calculate_user_weekly_points(request.user)
         user_monthly_points = calculate_user_monthly_points(request.user)
-        
+
         # Calculate ranks by counting users with more points
         users_with_more_points = Points.objects.values('user').annotate(
             total=models.Sum('amount')
         ).filter(total__gt=user_points).count()
         user_rank = users_with_more_points + 1
-        
+
         one_week_ago = timezone.now() - timedelta(days=7)
         users_with_more_weekly_points = Points.objects.filter(
             awarded_at__gte=one_week_ago
@@ -381,7 +324,7 @@ def all_leaderboards(request):
             total=models.Sum('amount')
         ).filter(total__gt=user_weekly_points).count()
         user_weekly_rank = users_with_more_weekly_points + 1
-        
+
         one_month_ago = timezone.now() - timedelta(days=30)
         users_with_more_monthly_points = Points.objects.filter(
             awarded_at__gte=one_month_ago
@@ -389,7 +332,7 @@ def all_leaderboards(request):
             total=models.Sum('amount')
         ).filter(total__gt=user_monthly_points).count()
         user_monthly_rank = users_with_more_monthly_points + 1
-    
+
     context = {
         "global_entries": global_entries,
         "weekly_entries": weekly_entries,
@@ -399,7 +342,7 @@ def all_leaderboards(request):
         "user_weekly_rank": user_weekly_rank,
         "user_monthly_rank": user_monthly_rank,
     }
-    
+
     return render(request, "leaderboards/leaderboards.html", context)
 
 

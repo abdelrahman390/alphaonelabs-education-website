@@ -103,49 +103,76 @@ class Command(BaseCommand):
             self.stdout.write(f"Created student: {user.username}")
 
         # Create challenges first
-        existing_weeks = set(Challenge.objects.values_list('weekly_points', flat=True))
+        existing_weeks = set(Challenge.objects.values_list('week_number', flat=True))
         challenges = []
         for i in range(5):
             week_num = i + 1
             # Skip if week number already exists
-            if week_num in existing_weeks:
+            if week_num in [c.week_number for c in Challenge.objects.all()]:
                 continue
 
             challenge = Challenge.objects.create(
                 title=f"Weekly Challenge {i + 1}",
                 description=f"Description for challenge {i + 1}",
-                weekly_points=week_num,
+                week_number=week_num,
                 start_date=timezone.now().date(),
                 end_date=(timezone.now() + timedelta(days=7)).date(),
             )
             challenges.append(challenge)
             self.stdout.write(f"Created challenge: {challenge.title}")
 
-        # Now create the leaderboard entries and challenge submissions
+        # Now create challenge submissions and points
         for student in students:
-            # Create a leaderboard entry for each student
-            score = random.randint(0, 500)
-            weekly_points = random.randint(0, 100)
-            monthly_points = random.randint(0, 300)
-            challenge_count = random.randint(0, 10)
-            current_streak = random.randint(0, 5)
-            highest_streak = max(current_streak, random.randint(current_streak, 8))
-
-            self.stdout.write(f"Created leaderboard entry for {student.username} with {score} points, weakly points: {weekly_points}, monthly points: {monthly_points}")
-
-            # Submit random challenges for this student
             challenge_list = list(Challenge.objects.all())
             if challenge_list:
-                completed_challenges = random.sample(challenge_list, min(challenge_count, len(challenge_list)))
-                for challenge in completed_challenges:
-                    # Create an actual submission, which will create Points through the save method
+                completed_challenges = random.sample(challenge_list, min(random.randint(1, len(challenge_list)), len(challenge_list)))
+                for i, challenge in enumerate(completed_challenges):
+                    # Create submission (will auto-create points through save method)
                     submission = ChallengeSubmission.objects.create(
                         user=student,
-                        challenge=challenge,  
-                        submission_text=f"Submission for challenge {challenge.weekly_points}",
+                        challenge=challenge,
+                        submission_text=f"Submission for challenge {challenge.week_number}",
                         points_awarded=random.randint(5, 20)
                     )
-                    self.stdout.write(f"Created submission for {student.username} - Challenge {challenge.weekly_points}")
+                    self.stdout.write(f"Created submission for {student.username} - Challenge {challenge.week_number}")
+
+                    # For testing streaks, artificially add streak records for some users
+                    if i > 0 and random.random() < 0.7:  # 70% chance to have a streak
+                        streak_len = i + 1
+                        Points.objects.create(
+                            user=student,
+                            challenge=None,
+                            amount=0,
+                            reason=f"Current streak: {streak_len}",
+                            point_type="streak"
+                        )
+                        self.stdout.write(f"Created streak record for {student.username}: {streak_len}")
+
+                        # Add bonus points for streak milestones
+                        if streak_len % 5 == 0:
+                            bonus = streak_len // 5 * 5
+                            Points.objects.create(
+                                user=student,
+                                challenge=None,
+                                amount=bonus,
+                                reason=f"Streak milestone bonus ({streak_len} weeks)",
+                                point_type="bonus"
+                            )
+                            self.stdout.write(f"Created bonus points for {student.username}: {bonus}")
+
+
+        # Create additional random points for testing
+        for user in User.objects.all():
+            # Create random regular points
+            for _ in range(random.randint(1, 5)):
+                points = random.randint(5, 50)
+                Points.objects.create(
+                    user=user,
+                    amount=points,
+                    reason=f"Test data - Random activity points",
+                    point_type="regular"
+                )
+                self.stdout.write(f"Created {points} random points for {user.username}")
 
         # Create friend connections for leaderboards
         for student in students:

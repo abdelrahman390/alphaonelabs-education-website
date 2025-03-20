@@ -165,6 +165,7 @@ class WebRequest(models.Model):
         return f"{self.path} - {self.count} views"
 
 
+# Update in models.py to add point_type field to Points model
 class Points(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="points")
     challenge = models.ForeignKey("Challenge", on_delete=models.CASCADE, null=True, blank=True, related_name="points_awarded")
@@ -176,7 +177,7 @@ class Points(models.Model):
         ("bonus", "Bonus Points")
     ])
     awarded_at = models.DateTimeField(auto_now_add=True)
-    
+
     def __str__(self):
         return f"{self.user.username}: {self.amount} points for {self.reason}"
 
@@ -1178,7 +1179,7 @@ class ChallengeSubmission(models.Model):
                 reason=f"Completed challenge: Week {self.challenge.week_number}",
                 point_type="regular"
             )
-            
+
             # Calculate and update streak
             last_week = self.challenge.week_number - 1
             if last_week > 0:
@@ -1187,13 +1188,13 @@ class ChallengeSubmission(models.Model):
                     last_week_submission = ChallengeSubmission.objects.filter(
                         user=self.user, challenge=last_week_challenge
                     ).exists()
-                    
+
                     if last_week_submission:
                         # User completed consecutive weeks, calculate their current streak
                         streak_points = Points.objects.filter(
                             user=self.user, point_type="streak"
                         ).order_by('-awarded_at').first()
-                        
+
                         current_streak = 1
                         if streak_points and "Current streak:" in streak_points.reason:
                             try:
@@ -1202,7 +1203,7 @@ class ChallengeSubmission(models.Model):
                                 current_streak = 2
                         else:
                             current_streak = 2
-                        
+
                         # Record the updated streak
                         Points.objects.create(
                             user=self.user,
@@ -1211,7 +1212,7 @@ class ChallengeSubmission(models.Model):
                             reason=f"Current streak: {current_streak}",
                             point_type="streak"
                         )
-                        
+
                         # Award bonus points for streak milestones
                         if current_streak > 0 and current_streak % 5 == 0:
                             bonus = current_streak // 5 * 5  # 5 points per milestone
