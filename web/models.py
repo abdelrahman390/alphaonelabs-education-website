@@ -177,6 +177,7 @@ class LeaderboardEntry(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="leaderboard_entries")
     # Replace score with points or keep both
     points = models.IntegerField(default=0)
+    score = models.IntegerField(default=0)
     weekly_points = models.IntegerField(default=0)
     monthly_points = models.IntegerField(default=0)
     challenge_count = models.IntegerField(default=0)
