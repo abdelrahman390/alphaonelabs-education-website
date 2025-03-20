@@ -166,18 +166,15 @@ class WebRequest(models.Model):
 
 
 class Points(models.Model):
-    """
-    Tracks individual point awards for users based on specific activities.
-    Provides a more granular record of points than the previous LeaderboardEntry model.
-    """
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="points")
-    challenge = models.ForeignKey(
-        "Challenge", on_delete=models.CASCADE, null=True, blank=True, related_name="points"
-    )
-    weekly_points = models.IntegerField(default=0)
-    monthly_points = models.IntegerField(default=0)
+    challenge = models.ForeignKey("Challenge", on_delete=models.CASCADE, null=True, blank=True, related_name="points_awarded")
     amount = models.IntegerField(default=0)
     reason = models.CharField(max_length=255, help_text="Reason for awarding points")
+    point_type = models.CharField(max_length=20, default="regular", choices=[
+        ("regular", "Regular Points"),
+        ("streak", "Streak Points"),
+        ("bonus", "Bonus Points")
+    ])
     awarded_at = models.DateTimeField(auto_now_add=True)
     
     def __str__(self):
@@ -1173,45 +1170,58 @@ class ChallengeSubmission(models.Model):
         super().save(*args, **kwargs)
 
         if is_new:
-            # Create a new Points record instead of updating
+            # Add regular points for completing the challenge
             Points.objects.create(
                 user=self.user,
-                amount=self.points_awarded, 
                 challenge=self.challenge,
-                reason=f"Completed challenge: Week {self.challenge.week_number}"
+                amount=self.points_awarded,
+                reason=f"Completed challenge: Week {self.challenge.week_number}",
+                point_type="regular"
             )
-            # Update leaderboard when a new submission is created
-            entry, created = Points.objects.get_or_create(
-                user=self.user,
-                challenge=self.challenge  # Associate with the specific challenge
-            )
-
-            # Add points - use the score field instead
-            entry.score += self.points_awarded  # This will also update points/weekly_points via property
-
-            # Update streak logic remains the same
-            last_week_challenge = Challenge.objects.filter(week_number=self.challenge.week_number - 1).first()
-
-            if last_week_challenge:
-                last_week_submission = ChallengeSubmission.objects.filter(
-                    user=self.user, challenge=last_week_challenge
-                ).exists()
-
-                if last_week_submission:
-                    # Continue the streak
-                    entry.current_streak += 1
-                else:
-                    # Reset streak
-                    entry.current_streak = 1
-            else:
-                # First challenge or no previous challenge
-                entry.current_streak = 1
-
-            # Update highest streak if needed
-            if entry.current_streak > entry.highest_streak:
-                entry.highest_streak = entry.current_streak
-
-            entry.save()
+            
+            # Calculate and update streak
+            last_week = self.challenge.week_number - 1
+            if last_week > 0:
+                last_week_challenge = Challenge.objects.filter(week_number=last_week).first()
+                if last_week_challenge:
+                    last_week_submission = ChallengeSubmission.objects.filter(
+                        user=self.user, challenge=last_week_challenge
+                    ).exists()
+                    
+                    if last_week_submission:
+                        # User completed consecutive weeks, calculate their current streak
+                        streak_points = Points.objects.filter(
+                            user=self.user, point_type="streak"
+                        ).order_by('-awarded_at').first()
+                        
+                        current_streak = 1
+                        if streak_points and "Current streak:" in streak_points.reason:
+                            try:
+                                current_streak = int(streak_points.reason.split(":")[1].strip()) + 1
+                            except (ValueError, IndexError):
+                                current_streak = 2
+                        else:
+                            current_streak = 2
+                        
+                        # Record the updated streak
+                        Points.objects.create(
+                            user=self.user,
+                            challenge=None,
+                            amount=0,  # Just a record, no points awarded for the streak itself
+                            reason=f"Current streak: {current_streak}",
+                            point_type="streak"
+                        )
+                        
+                        # Award bonus points for streak milestones
+                        if current_streak > 0 and current_streak % 5 == 0:
+                            bonus = current_streak // 5 * 5  # 5 points per milestone
+                            Points.objects.create(
+                                user=self.user,
+                                challenge=None,
+                                amount=bonus,
+                                reason=f"Streak milestone bonus ({current_streak} weeks)",
+                                point_type="bonus"
+                            )
 
 
 class ProductImage(models.Model):

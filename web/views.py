@@ -136,7 +136,7 @@ def sitemap(request):
 
 def index(request):
     """Homepage view."""
-    print("####################")
+    # print("####################")
     # Store referral code in session if present in URL
     ref_code = request.GET.get("ref")
 
@@ -342,46 +342,54 @@ def handle_challenge_submission(request, challenge_id):
 @login_required
 def all_leaderboards(request):
     """
-    Display all leaderboard types on a single page using the Points model.
+    Display all leaderboard types on a single page.
     """
+    from .utils import get_leaderboard
     
-    # Get leaderboard data
+    # Get leaderboard data for different time periods
     global_entries = get_leaderboard(period=None, limit=10)
     weekly_entries = get_leaderboard(period='weekly', limit=10)
     monthly_entries = get_leaderboard(period='monthly', limit=10)
-    # print("@@@@@@@@@@@@@@@@", request.user.username)
-    # print("@@@@@@@@@@@@@@@@", global_entries)
-    # print("@@@@@@@@@@@@@@@@", weekly_entries)
-    # print("@@@@@@@@@@@@@@@@", monthly_entries)
     
-    # User's rank info (if authenticated)
+    # Get user's rank if authenticated
     user_rank = None
     user_weekly_rank = None
     user_monthly_rank = None
-
+    
     if request.user.is_authenticated:
-        # Calculate user's rank using the Points model
+        from .utils import (
+            calculate_user_total_points,
+            calculate_user_weekly_points,
+            calculate_user_monthly_points
+        )
+        
+        # Get user's points
         user_points = calculate_user_total_points(request.user)
         user_weekly_points = calculate_user_weekly_points(request.user)
         user_monthly_points = calculate_user_monthly_points(request.user)
         
-        # Calculate rank by counting users with more points
-        user_rank = User.objects.annotate(
-            total_points=Sum('points__amount')
-        ).filter(total_points__gt=user_points).count() + 1
+        # Calculate ranks by counting users with more points
+        users_with_more_points = Points.objects.values('user').annotate(
+            total=models.Sum('amount')
+        ).filter(total__gt=user_points).count()
+        user_rank = users_with_more_points + 1
         
-        user_weekly_rank = User.objects.annotate(
-            weekly_points=Sum('points__amount', filter=Q(
-                points__awarded_at__gte=timezone.now() - timedelta(days=7)
-            ))
-        ).filter(weekly_points__gt=user_weekly_points).count() + 1
+        one_week_ago = timezone.now() - timedelta(days=7)
+        users_with_more_weekly_points = Points.objects.filter(
+            awarded_at__gte=one_week_ago
+        ).values('user').annotate(
+            total=models.Sum('amount')
+        ).filter(total__gt=user_weekly_points).count()
+        user_weekly_rank = users_with_more_weekly_points + 1
         
-        user_monthly_rank = User.objects.annotate(
-            monthly_points=Sum('points__amount', filter=Q(
-                points__awarded_at__gte=timezone.now() - timedelta(days=30)
-            ))
-        ).filter(monthly_points__gt=user_monthly_points).count() + 1
-
+        one_month_ago = timezone.now() - timedelta(days=30)
+        users_with_more_monthly_points = Points.objects.filter(
+            awarded_at__gte=one_month_ago
+        ).values('user').annotate(
+            total=models.Sum('amount')
+        ).filter(total__gt=user_monthly_points).count()
+        user_monthly_rank = users_with_more_monthly_points + 1
+    
     context = {
         "global_entries": global_entries,
         "weekly_entries": weekly_entries,
@@ -391,7 +399,7 @@ def all_leaderboards(request):
         "user_weekly_rank": user_weekly_rank,
         "user_monthly_rank": user_monthly_rank,
     }
-
+    
     return render(request, "leaderboards/leaderboards.html", context)
 
 

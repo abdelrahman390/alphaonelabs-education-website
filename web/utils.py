@@ -1,8 +1,9 @@
 import requests
 from django.conf import settings
-from django.db import models
-from django.utils import timezone
+from django.utils import timezone 
 from datetime import timedelta
+from datetime import timedelta
+from django.contrib.auth.models import User
 
 from web.models import (
     Cart,
@@ -42,6 +43,7 @@ def get_or_create_cart(request):
         cart, created = Cart.objects.get_or_create(session_key=session_key)
     return cart
 
+
 def calculate_user_total_points(user):
     """Calculate total points for a user"""
     return Points.objects.filter(user=user).aggregate(total=models.Sum('amount'))['total'] or 0
@@ -60,40 +62,61 @@ def calculate_user_monthly_points(user):
         user=user, awarded_at__gte=one_month_ago
     ).aggregate(total=models.Sum('amount'))['total'] or 0
 
+def calculate_user_streak(user):
+    """Calculate current streak for a user"""
+    streak_record = Points.objects.filter(
+        user=user, point_type="streak"
+    ).order_by('-awarded_at').first()
+    
+    if streak_record and "Current streak:" in streak_record.reason:
+        try:
+            return int(streak_record.reason.split(":")[1].strip())
+        except (ValueError, IndexError):
+            return 0
+    return 0
+
 def get_leaderboard(period=None, limit=10):
     """
     Get leaderboard data based on period (None for all-time, 'weekly', or 'monthly')
+    Returns a list of users with their points sorted by total points
     """
     users = User.objects.all()
     leaderboard_data = []
     
     for user in users:
-        # Calculate points for the specified period
-        if period == 'weekly':
-            time_threshold = timezone.now() - timedelta(days=7)
-            points = Points.objects.filter(
-                user=user, awarded_at__gte=time_threshold
-            ).aggregate(total=models.Sum('amount'))['total'] or 0
-        elif period == 'monthly':
-            time_threshold = timezone.now() - timedelta(days=30)
-            points = Points.objects.filter(
-                user=user, awarded_at__gte=time_threshold
-            ).aggregate(total=models.Sum('amount'))['total'] or 0
-        else:
-            # Global/all-time points
-            points = Points.objects.filter(user=user).aggregate(
-                total=models.Sum('amount'))['total'] or 0
+        # Calculate points for all time periods
+        total_points = calculate_user_total_points(user)
+        weekly_points = calculate_user_weekly_points(user)
+        monthly_points = calculate_user_monthly_points(user)
+        current_streak = calculate_user_streak(user)
+        challenge_count = ChallengeSubmission.objects.filter(user=user).count()
         
-        if points > 0:  # Only include users with points
-            challenge_count = ChallengeSubmission.objects.filter(user=user).count()
-            
-            leaderboard_data.append({
-                'user': user,
-                'points': points,
-                'challenge_count': challenge_count
-            })
+        # Skip users with no points in the relevant period
+        if period == 'weekly' and weekly_points <= 0:
+            continue
+        elif period == 'monthly' and monthly_points <= 0:
+            continue
+        elif period is None and total_points <= 0:
+            continue
+        
+        # Add all data for every entry
+        entry_data = {
+            'user': user,
+            'points': total_points,
+            'weekly_points': weekly_points,
+            'monthly_points': monthly_points,
+            'current_streak': current_streak,
+            'challenge_count': challenge_count
+        }
+        
+        leaderboard_data.append(entry_data)
     
-    # Sort by points (descending)
-    leaderboard_data.sort(key=lambda x: x['points'], reverse=True)
+    # Sort by the appropriate field based on period
+    if period == 'weekly':
+        leaderboard_data.sort(key=lambda x: x['weekly_points'], reverse=True)
+    elif period == 'monthly':
+        leaderboard_data.sort(key=lambda x: x['monthly_points'], reverse=True)
+    else:
+        leaderboard_data.sort(key=lambda x: x['points'], reverse=True)
     
     return leaderboard_data[:limit]
