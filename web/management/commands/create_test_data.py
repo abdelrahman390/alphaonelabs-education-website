@@ -269,7 +269,6 @@ class Command(BaseCommand):
 
         print(f"Created {len(users)} leaderboard entries!")
 
-
         # Create subjects
         subjects = []
         subject_data = [
@@ -528,4 +527,5 @@ class Command(BaseCommand):
                 )
             self.stdout.write(f"Created images for product: {product.name}")
 
+        
         self.stdout.write(self.style.SUCCESS("Successfully created test data"))
