@@ -85,11 +85,22 @@ def get_leaderboard(period=None, limit=10):
                 total=models.Sum('amount'))['total'] or 0
         
         if points > 0:  # Only include users with points
-            leaderboard_data.append({
+            entry_data = {
                 'user': user,
-                'points': points,
                 'challenge_count': ChallengeSubmission.objects.filter(user=user).count()
-            })
+            }
+            
+            # Set the appropriate points field based on period
+            if period == 'weekly':
+                entry_data['weekly_points'] = points
+                entry_data['points'] = points  # For backward compatibility
+            elif period == 'monthly':
+                entry_data['monthly_points'] = points
+                entry_data['points'] = points  # For backward compatibility
+            else:
+                entry_data['points'] = points
+            
+            leaderboard_data.append(entry_data)
     
     # Sort by points (descending)
     leaderboard_data.sort(key=lambda x: x['points'], reverse=True)
