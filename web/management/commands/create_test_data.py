@@ -36,6 +36,12 @@ from web.models import (
     ChallengeSubmission,
 )
 
+def random_date_between(start_date, end_date):
+    """Generate a random datetime between start_date and end_date"""
+    delta = end_date - start_date
+    random_seconds = random.randint(0, int(delta.total_seconds()))
+    return start_date + timedelta(seconds=random_seconds)
+
 
 class Command(BaseCommand):
     help = "Creates test data for all models in the application"
@@ -103,7 +109,7 @@ class Command(BaseCommand):
             self.stdout.write(f"Created student: {user.username}")
 
         # Create challenges first
-        existing_weeks = set(Challenge.objects.values_list('week_number', flat=True))
+        # existing_weeks = set(Challenge.objects.values_list('week_number', flat=True))
         challenges = []
         for i in range(5):
             week_num = i + 1
@@ -115,11 +121,15 @@ class Command(BaseCommand):
                 title=f"Weekly Challenge {i + 1}",
                 description=f"Description for challenge {i + 1}",
                 week_number=week_num,
-                start_date=timezone.now().date(),
+                start_date=timezone.now().date() - timedelta(days=14),  # Start from 2 weeks ago
                 end_date=(timezone.now() + timedelta(days=7)).date(),
             )
             challenges.append(challenge)
-            self.stdout.write(f"Created challenge: {challenge.title}")
+            self.stdout.write(f"Created challenge: {challenge.title}, {challenge.start_date},- {challenge.end_date}")
+
+        # Date range for random dates (from 2 weeks ago to now)
+        now = timezone.now()
+        two_weeks_ago = now - timedelta(days=14)
 
         # Now create challenge submissions and points
         for student in students:
@@ -134,45 +144,80 @@ class Command(BaseCommand):
                         submission_text=f"Submission for challenge {challenge.week_number}",
                         points_awarded=random.randint(5, 20)
                     )
-                    self.stdout.write(f"Created submission for {student.username} - Challenge {challenge.week_number}")
+                    
+                    # Assign random date to the submission
+                    random_date = random_date_between(two_weeks_ago, now)
+                    submission.submitted_at = random_date
+                    submission.save(update_fields=['submitted_at'])
+                    
+                    self.stdout.write(f"Created submission for {student.username} - Challenge {challenge.week_number} on {random_date.date()}")
+
+                    # Find the points record created by the submission save method and update its date
+                    points = Points.objects.filter(
+                        user=student, 
+                        challenge=challenge,
+                        point_type="regular"
+                    ).order_by('-awarded_at').first()
+                    
+                    if points:
+                        points.awarded_at = random_date
+                        points.save(update_fields=['awarded_at'])
 
                     # For testing streaks, artificially add streak records for some users
                     if i > 0 and random.random() < 0.7:  # 70% chance to have a streak
                         streak_len = i + 1
-                        Points.objects.create(
+                        streak_points = Points.objects.create(
                             user=student,
                             challenge=None,
                             amount=0,
                             reason=f"Current streak: {streak_len}",
                             point_type="streak"
                         )
-                        self.stdout.write(f"Created streak record for {student.username}: {streak_len}")
+                        
+                        # Set streak date slightly after the submission date
+                        streak_date = random_date + timedelta(minutes=random.randint(1, 30))
+                        streak_points.awarded_at = streak_date
+                        streak_points.save(update_fields=['awarded_at'])
+                        
+                        self.stdout.write(f"Created streak record for {student.username}: {streak_len} on {streak_date.date()}")
 
                         # Add bonus points for streak milestones
                         if streak_len % 5 == 0:
                             bonus = streak_len // 5 * 5
-                            Points.objects.create(
+                            bonus_points = Points.objects.create(
                                 user=student,
                                 challenge=None,
                                 amount=bonus,
                                 reason=f"Streak milestone bonus ({streak_len} weeks)",
                                 point_type="bonus"
                             )
-                            self.stdout.write(f"Created bonus points for {student.username}: {bonus}")
-
+                            
+                            # Set bonus date slightly after the streak record
+                            bonus_date = streak_date + timedelta(minutes=random.randint(1, 15))
+                            bonus_points.awarded_at = bonus_date
+                            bonus_points.save(update_fields=['awarded_at'])
+                            
+                            self.stdout.write(f"Created bonus points for {student.username}: {bonus} on {bonus_date.date()}")
 
         # Create additional random points for testing
         for user in User.objects.all():
             # Create random regular points
             for _ in range(random.randint(1, 5)):
-                points = random.randint(5, 50)
-                Points.objects.create(
+                points_amount = random.randint(5, 50)
+                points = Points.objects.create(
                     user=user,
-                    amount=points,
+                    amount=points_amount,
                     reason=f"Test data - Random activity points",
                     point_type="regular"
                 )
-                self.stdout.write(f"Created {points} random points for {user.username}")
+                
+                # Assign random date
+                random_date = random_date_between(two_weeks_ago, now)
+                points.awarded_at = random_date
+                points.save(update_fields=['awarded_at'])
+                
+                self.stdout.write(f"Created {points_amount} random points for {user.username} on {random_date.date()}")
+
 
         # Create friend connections for leaderboards
         for student in students:
@@ -189,27 +234,41 @@ class Command(BaseCommand):
                 else:
                     friends.append(connection.sender)
             if friends:
-                Points.objects.create(
+                points = Points.objects.create(
                     user=student,
                     amount=len(friends),  # Points for friend connections
                     reason=f"Connected with {len(friends)} peers",
                     challenge=None,
                 )
-                self.stdout.write(f"Created friend record for {student.username} with {len(friends)} friends")
+                
+                # Assign random date
+                random_date = random_date_between(two_weeks_ago, now)
+                points.awarded_at = random_date
+                points.save(update_fields=['awarded_at'])
+                
+                self.stdout.write(f"Created friend record for {student.username} with {len(friends)} friends on {random_date.date()}")
 
         # Create entries for existing users
         users = User.objects.all()
         for user in users:
             # Random score between 100 and 1000
             score = random.randint(100, 1000)
-            Points.objects.create(
+            points = Points.objects.create(
                 user=user,
                 amount=score,
                 reason=f"Test data - Random points",
                 challenge=challenges[0] if challenges else None,
             )
+            
+            # Assign random date
+            random_date = random_date_between(two_weeks_ago, now)
+            points.awarded_at = random_date
+            points.save(update_fields=['awarded_at'])
+            
+            self.stdout.write(f"Created {score} points for {user.username} on {random_date.date()}")
 
         print(f"Created {len(users)} leaderboard entries!")
+
 
         # Create subjects
         subjects = []

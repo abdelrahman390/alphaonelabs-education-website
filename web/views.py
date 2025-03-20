@@ -287,7 +287,6 @@ def all_leaderboards(request):
     """
     Display all leaderboard types on a single page.
     """
-    from .utils import get_leaderboard
 
     # Get leaderboard data for different time periods
     global_entries = get_leaderboard(period=None, limit=10)
@@ -300,11 +299,6 @@ def all_leaderboards(request):
     user_monthly_rank = None
 
     if request.user.is_authenticated:
-        from .utils import (
-            calculate_user_total_points,
-            calculate_user_weekly_points,
-            calculate_user_monthly_points
-        )
 
         # Get user's points
         user_points = calculate_user_total_points(request.user)

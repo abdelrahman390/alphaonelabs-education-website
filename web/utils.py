@@ -1,5 +1,6 @@
 import requests
 from django.conf import settings
+from django.db import models
 from django.utils import timezone
 from datetime import timedelta
 from datetime import timedelta
@@ -43,6 +44,7 @@ def get_or_create_cart(request):
         cart, created = Cart.objects.get_or_create(session_key=session_key)
     return cart
 
+
 def calculate_user_total_points(user):
     """Calculate total points for a user"""
     return Points.objects.filter(user=user).aggregate(total=models.Sum('amount'))['total'] or 0
@@ -50,6 +52,7 @@ def calculate_user_total_points(user):
 def calculate_user_weekly_points(user):
     """Calculate weekly points for a user"""
     one_week_ago = timezone.now() - timedelta(days=7)
+
     return Points.objects.filter(
         user=user, awarded_at__gte=one_week_ago
     ).aggregate(total=models.Sum('amount'))['total'] or 0
