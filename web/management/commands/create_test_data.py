@@ -103,12 +103,18 @@ class Command(BaseCommand):
             self.stdout.write(f"Created student: {user.username}")
 
         # Create challenges first
+        existing_weeks = set(Challenge.objects.values_list('week_number', flat=True))
         challenges = []
         for i in range(5):
+            week_num = i + 1
+            # Skip if week number already exists
+            if week_num in existing_weeks:
+                continue
+
             challenge = Challenge.objects.create(
                 title=f"Weekly Challenge {i + 1}",
                 description=f"Description for challenge {i + 1}",
-                week_number=i + 1,
+                week_number=week_num,
                 start_date=timezone.now().date(),
                 end_date=(timezone.now() + timedelta(days=7)).date(),
             )

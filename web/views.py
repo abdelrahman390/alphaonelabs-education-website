@@ -116,6 +116,7 @@ from .models import (
     SuccessStory,
     TimeSlot,
     WebRequest,
+    Points
 )
 from .notifications import notify_session_reminder, notify_teacher_new_enrollment, send_enrollment_confirmation
 from .referrals import send_referral_reward_email
@@ -136,8 +137,25 @@ def index(request):
     """Homepage view."""
     # Store referral code in session if present in URL
     ref_code = request.GET.get("ref")
+
     if ref_code:
         request.session["referral_code"] = ref_code
+
+    # Get top referrers 
+    top_referrers = Profile.objects.annotate(
+        total_signups=models.Count("referrals"),
+        total_enrollments=models.Count(
+            "referrals__user__enrollments", filter=models.Q(referrals__user__enrollments__status="approved")
+        ),
+        total_clicks=models.Count(
+            "referrals__user",
+            filter=models.Q(
+                referrals__user__username__in=WebRequest.objects.filter(path__contains="ref=").values_list(
+                    "user", flat=True
+                )
+            ),
+        ),
+    ).order_by("-total_signups", "-total_enrollments")[:3]
 
     # Get current user's profile if authenticated
     profile = request.user.profile if request.user.is_authenticated else None
@@ -156,22 +174,6 @@ def index(request):
 
     # Get top latest 3 leaderboard users
     top_leaderboard_users = LeaderboardEntry.objects.select_related("user").order_by("-score")[:3]
-
-    # Get top referrers (needed for the test to pass)
-    top_referrers = Profile.objects.annotate(
-        total_signups=models.Count("referrals"),
-        total_enrollments=models.Count(
-            "referrals__user__enrollments", filter=models.Q(referrals__user__enrollments__status="approved")
-        ),
-        total_clicks=models.Count(
-            "referrals__user",
-            filter=models.Q(
-                referrals__user__username__in=WebRequest.objects.filter(path__contains="ref=").values_list(
-                    "user", flat=True
-                )
-            ),
-        ),
-    ).order_by("-total_signups", "-total_enrollments")[:3]
 
     # Get signup form if needed
     form = None
@@ -217,6 +219,120 @@ def signup_view(request):
             "login_url": reverse("account_login"),
         },
     )
+
+
+def handle_challenge_submission(request, challenge_id):
+    challenge = get_object_or_404(Challenge, id=challenge_id)
+    
+    # Create submission
+    submission = ChallengeSubmission.objects.create(
+        user=request.user,
+        challenge=challenge,
+        submission_text=request.POST.get('submission_text')
+    )
+    
+    # Award points
+    points_amount = 10  # Default points or calculated amount
+    
+    # Create points record
+    Points.objects.create(
+        user=request.user,
+        challenge=challenge,
+        amount=points_amount,
+        reason=f"Completed challenge: {challenge.title}"
+    )
+    
+    # Calculate streak
+    last_week_challenge = Challenge.objects.filter(week_number=challenge.week_number - 1).first()
+    current_streak = 1
+    
+    if last_week_challenge:
+        last_week_submission = ChallengeSubmission.objects.filter(
+            user=request.user, challenge=last_week_challenge
+        ).exists()
+        
+        if last_week_submission:
+            # Get the user's most recent points entry with a streak update
+            latest_streak = Points.objects.filter(
+                user=request.user, 
+                reason__startswith="Streak update"
+            ).order_by('-awarded_at').first()
+            
+            if latest_streak:
+                # Extract streak number from reason
+                try:
+                    current_streak = int(latest_streak.reason.split(":")[-1].strip()) + 1
+                except (ValueError, IndexError):
+                    current_streak = 2
+            else:
+                current_streak = 2
+    
+    # If streak changed, record it
+    if current_streak > 1:
+        Points.objects.create(
+            user=request.user,
+            amount=current_streak,  # Maybe award points equal to streak count
+            reason=f"Streak update: {current_streak}"
+        )
+    
+    return redirect('challenge_detail', challenge_id=challenge_id)
+
+
+def handle_challenge_submission(request, challenge_id):
+    challenge = get_object_or_404(Challenge, id=challenge_id)
+    
+    # Create submission
+    submission = ChallengeSubmission.objects.create(
+        user=request.user,
+        challenge=challenge,
+        submission_text=request.POST.get('submission_text')
+    )
+    
+    # Award points
+    points_amount = 10  # Default points or calculated amount
+    
+    # Create points record
+    Points.objects.create(
+        user=request.user,
+        challenge=challenge,
+        amount=points_amount,
+        reason=f"Completed challenge: {challenge.title}"
+    )
+    
+    # Calculate streak
+    last_week_challenge = Challenge.objects.filter(week_number=challenge.week_number - 1).first()
+    current_streak = 1
+    
+    if last_week_challenge:
+        last_week_submission = ChallengeSubmission.objects.filter(
+            user=request.user, challenge=last_week_challenge
+        ).exists()
+        
+        if last_week_submission:
+            # Get the user's most recent points entry with a streak update
+            latest_streak = Points.objects.filter(
+                user=request.user, 
+                reason__startswith="Streak update"
+            ).order_by('-awarded_at').first()
+            
+            if latest_streak:
+                # Extract streak number from reason
+                try:
+                    current_streak = int(latest_streak.reason.split(":")[-1].strip()) + 1
+                except (ValueError, IndexError):
+                    current_streak = 2
+            else:
+                current_streak = 2
+    
+    # If streak changed, record it
+    if current_streak > 1:
+        Points.objects.create(
+            user=request.user,
+            amount=current_streak,  # Maybe award points equal to streak count
+            reason=f"Streak update: {current_streak}"
+        )
+    
+    return redirect('challenge_detail', challenge_id=challenge_id)
 
 
 # new future, #22 issue

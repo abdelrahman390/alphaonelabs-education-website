@@ -165,6 +165,27 @@ class WebRequest(models.Model):
         return f"{self.path} - {self.count} views"
 
 
+class Points(models.Model):
+    """
+    Tracks individual point awards for users based on specific activities.
+    Provides a more granular record of points than the previous LeaderboardEntry model.
+    """
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="points")
+    challenge = models.ForeignKey(
+        "Challenge", on_delete=models.CASCADE, null=True, blank=True, related_name="points"
+    )
+    amount = models.IntegerField(default=0)
+    reason = models.CharField(max_length=255, help_text="Reason for awarding points")
+    awarded_at = models.DateTimeField(auto_now_add=True)
+    
+    def __str__(self):
+        return f"{self.user.username}: {self.amount} points for {self.reason}"
+
+    class Meta:
+        verbose_name_plural = "Points"
+        ordering = ["-awarded_at"]
+
+
 class LeaderboardEntry(models.Model):
     """
     Tracks points earned by users for platform activities.
@@ -175,7 +196,6 @@ class LeaderboardEntry(models.Model):
     """
 
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="leaderboard_entries")
-    # Replace score with points or keep both
     points = models.IntegerField(default=0)
     score = models.IntegerField(default=0)
     weekly_points = models.IntegerField(default=0)
