@@ -142,14 +142,14 @@ class Command(BaseCommand):
                     Points.objects.create(
                         user=student,
                         amount=score,         # Use amount instead of points/weekly_points etc.
-                        score=score,          # Set both fields
+                        # score=score,          # Set both fields
                         reason=f"Completed challenge {challenge.week_number}",
                         challenge=challenge,
                     )
                     Points.objects.create(
                         user=student,
                         amount=0,             # No points for the streak record
-                        score=0,              # No points for the streak record
+                        # score=0,              # No points for the streak record
                         reason=f"Streak update: {current_streak}",
                         challenge=None,
                     )
@@ -175,7 +175,7 @@ class Command(BaseCommand):
                 Points.objects.create(
                     user=student,
                     amount=len(friends),  # Points for friend connections
-                    score=len(friends),
+                    # score=len(friends),
                     reason=f"Connected with {len(friends)} peers",
                     challenge=None,
                 )
@@ -189,7 +189,7 @@ class Command(BaseCommand):
             Points.objects.create(
                 user=user,
                 amount=score,
-                score=score,
+                # score=score,
                 reason=f"Test data - Random points",
                 challenge=challenges[0] if challenges else None,
             )
