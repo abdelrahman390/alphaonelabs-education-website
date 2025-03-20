@@ -42,7 +42,6 @@ def random_date_between(start_date, end_date):
     random_seconds = random.randint(0, int(delta.total_seconds()))
     return start_date + timedelta(seconds=random_seconds)
 
-
 class Command(BaseCommand):
     help = "Creates test data for all models in the application"
 
@@ -135,7 +134,11 @@ class Command(BaseCommand):
         for student in students:
             challenge_list = list(Challenge.objects.all())
             if challenge_list:
-                completed_challenges = random.sample(challenge_list, min(random.randint(1, len(challenge_list)), len(challenge_list)))
+                completed_challenges = random.sample(
+                    challenge_list,
+                    min(random.randint(1, len(challenge_list)),
+                    len(challenge_list))
+                )
                 for i, challenge in enumerate(completed_challenges):
                     # Create submission (will auto-create points through save method)
                     submission = ChallengeSubmission.objects.create(
@@ -144,21 +147,21 @@ class Command(BaseCommand):
                         submission_text=f"Submission for challenge {challenge.week_number}",
                         points_awarded=random.randint(5, 20)
                     )
-                    
+
                     # Assign random date to the submission
                     random_date = random_date_between(two_weeks_ago, now)
                     submission.submitted_at = random_date
                     submission.save(update_fields=['submitted_at'])
-                    
+
                     self.stdout.write(f"Created submission for {student.username} - Challenge {challenge.week_number} on {random_date.date()}")
 
                     # Find the points record created by the submission save method and update its date
                     points = Points.objects.filter(
-                        user=student, 
+                        user=student,
                         challenge=challenge,
                         point_type="regular"
                     ).order_by('-awarded_at').first()
-                    
+
                     if points:
                         points.awarded_at = random_date
                         points.save(update_fields=['awarded_at'])
@@ -173,12 +176,12 @@ class Command(BaseCommand):
                             reason=f"Current streak: {streak_len}",
                             point_type="streak"
                         )
-                        
+
                         # Set streak date slightly after the submission date
                         streak_date = random_date + timedelta(minutes=random.randint(1, 30))
                         streak_points.awarded_at = streak_date
                         streak_points.save(update_fields=['awarded_at'])
-                        
+
                         self.stdout.write(f"Created streak record for {student.username}: {streak_len} on {streak_date.date()}")
 
                         # Add bonus points for streak milestones
@@ -191,12 +194,12 @@ class Command(BaseCommand):
                                 reason=f"Streak milestone bonus ({streak_len} weeks)",
                                 point_type="bonus"
                             )
-                            
+
                             # Set bonus date slightly after the streak record
                             bonus_date = streak_date + timedelta(minutes=random.randint(1, 15))
                             bonus_points.awarded_at = bonus_date
                             bonus_points.save(update_fields=['awarded_at'])
-                            
+
                             self.stdout.write(f"Created bonus points for {student.username}: {bonus} on {bonus_date.date()}")
 
         # Create additional random points for testing
@@ -210,12 +213,12 @@ class Command(BaseCommand):
                     reason=f"Test data - Random activity points",
                     point_type="regular"
                 )
-                
+
                 # Assign random date
                 random_date = random_date_between(two_weeks_ago, now)
                 points.awarded_at = random_date
                 points.save(update_fields=['awarded_at'])
-                
+
                 self.stdout.write(f"Created {points_amount} random points for {user.username} on {random_date.date()}")
 
 
@@ -240,12 +243,12 @@ class Command(BaseCommand):
                     reason=f"Connected with {len(friends)} peers",
                     challenge=None,
                 )
-                
+
                 # Assign random date
                 random_date = random_date_between(two_weeks_ago, now)
                 points.awarded_at = random_date
                 points.save(update_fields=['awarded_at'])
-                
+
                 self.stdout.write(f"Created friend record for {student.username} with {len(friends)} friends on {random_date.date()}")
 
         # Create entries for existing users
@@ -259,12 +262,12 @@ class Command(BaseCommand):
                 reason=f"Test data - Random points",
                 challenge=challenges[0] if challenges else None,
             )
-            
+
             # Assign random date
             random_date = random_date_between(two_weeks_ago, now)
             points.awarded_at = random_date
             points.save(update_fields=['awarded_at'])
-            
+
             self.stdout.write(f"Created {score} points for {user.username} on {random_date.date()}")
 
         print(f"Created {len(users)} leaderboard entries!")
@@ -527,5 +530,4 @@ class Command(BaseCommand):
                 )
             self.stdout.write(f"Created images for product: {product.name}")
 
-        
         self.stdout.write(self.style.SUCCESS("Successfully created test data"))

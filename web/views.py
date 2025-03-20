@@ -175,8 +175,7 @@ def index(request):
     latest_success_story = SuccessStory.objects.filter(status="published").order_by("-published_at").first()
 
     # Get top latest 3 leaderboard users
-    top_leaderboard_users = Points.objects.select_related("user").order_by("-amount")[:3]
-    print("####################", top_leaderboard_users)
+    top_leaderboard_users = get_leaderboard(limit=3)
 
     # Get signup form if needed
     form = None
