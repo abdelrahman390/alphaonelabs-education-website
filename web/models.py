@@ -188,7 +188,6 @@ class LeaderboardEntry(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
-
     # Property methods for backward compatibility
     @property
     def points(self):
