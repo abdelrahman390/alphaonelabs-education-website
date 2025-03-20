@@ -1176,8 +1176,8 @@ class ChallengeSubmission(models.Model):
             # Create a new Points record instead of updating
             Points.objects.create(
                 user=self.user,
+                amount=self.points_awarded, 
                 challenge=self.challenge,
-                amount=self.points_awarded,
                 reason=f"Completed challenge: Week {self.challenge.week_number}"
             )
             # Update leaderboard when a new submission is created

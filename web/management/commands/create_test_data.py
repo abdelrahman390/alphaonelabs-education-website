@@ -103,7 +103,7 @@ class Command(BaseCommand):
             self.stdout.write(f"Created student: {user.username}")
 
         # Create challenges first
-        existing_weeks = set(Challenge.objects.values_list('week_number', flat=True))
+        existing_weeks = set(Challenge.objects.values_list('weekly_points', flat=True))
         challenges = []
         for i in range(5):
             week_num = i + 1
@@ -114,7 +114,7 @@ class Command(BaseCommand):
             challenge = Challenge.objects.create(
                 title=f"Weekly Challenge {i + 1}",
                 description=f"Description for challenge {i + 1}",
-                week_number=week_num,
+                weekly_points=week_num,
                 start_date=timezone.now().date(),
                 end_date=(timezone.now() + timedelta(days=7)).date(),
             )
@@ -125,13 +125,13 @@ class Command(BaseCommand):
         for student in students:
             # Create a leaderboard entry for each student
             score = random.randint(0, 500)
-            week_number = random.randint(0, 100)
+            weekly_points = random.randint(0, 100)
             monthly_points = random.randint(0, 300)
             challenge_count = random.randint(0, 10)
             current_streak = random.randint(0, 5)
             highest_streak = max(current_streak, random.randint(current_streak, 8))
 
-            self.stdout.write(f"Created leaderboard entry for {student.username} with {score} points, weakly points: {week_number}, monthly points: {monthly_points}")
+            self.stdout.write(f"Created leaderboard entry for {student.username} with {score} points, weakly points: {weekly_points}, monthly points: {monthly_points}")
 
             # Submit random challenges for this student
             challenge_list = list(Challenge.objects.all())
@@ -142,10 +142,10 @@ class Command(BaseCommand):
                     submission = ChallengeSubmission.objects.create(
                         user=student,
                         challenge=challenge,  
-                        submission_text=f"Submission for challenge {challenge.week_number}",
+                        submission_text=f"Submission for challenge {challenge.weekly_points}",
                         points_awarded=random.randint(5, 20)
                     )
-                    self.stdout.write(f"Created submission for {student.username} - Challenge {challenge.week_number}")
+                    self.stdout.write(f"Created submission for {student.username} - Challenge {challenge.weekly_points}")
 
         # Create friend connections for leaderboards
         for student in students:
