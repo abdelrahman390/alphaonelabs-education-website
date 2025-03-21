@@ -3,15 +3,13 @@ from django.conf import settings
 from django.db import models
 from django.utils import timezone
 from datetime import timedelta
-from datetime import timedelta
-from django.contrib.auth.models import User
 
 from web.models import (
     Cart,
     Points,
     User,
     ChallengeSubmission,
-    )
+)
 
 
 def send_slack_message(message):
@@ -49,6 +47,7 @@ def calculate_user_total_points(user):
     """Calculate total points for a user"""
     return Points.objects.filter(user=user).aggregate(total=models.Sum('amount'))['total'] or 0
 
+
 def calculate_user_weekly_points(user):
     """Calculate weekly points for a user"""
     one_week_ago = timezone.now() - timedelta(days=7)
@@ -57,12 +56,14 @@ def calculate_user_weekly_points(user):
         user=user, awarded_at__gte=one_week_ago
     ).aggregate(total=models.Sum('amount'))['total'] or 0
 
+
 def calculate_user_monthly_points(user):
     """Calculate monthly points for a user"""
     one_month_ago = timezone.now() - timedelta(days=30)
     return Points.objects.filter(
         user=user, awarded_at__gte=one_month_ago
     ).aggregate(total=models.Sum('amount'))['total'] or 0
+
 
 def calculate_user_streak(user):
     """Calculate current streak for a user"""
@@ -76,6 +77,7 @@ def calculate_user_streak(user):
         except (ValueError, IndexError):
             return 0
     return 0
+
 
 def get_leaderboard(period=None, limit=10):
     """

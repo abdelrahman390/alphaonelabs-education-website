@@ -30,7 +30,11 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.template.loader import render_to_string
 from django.urls import NoReverseMatch, reverse, reverse_lazy
 from django.utils import timezone
-from .utils import calculate_user_total_points, calculate_user_weekly_points, calculate_user_monthly_points, get_leaderboard
+from .utils import (calculate_user_total_points,
+                    calculate_user_weekly_points,
+                    calculate_user_monthly_points,
+                    get_leaderboard,
+                    )
 from django.utils.crypto import get_random_string
 from django.utils.html import strip_tags
 from django.views import generic
@@ -227,7 +231,7 @@ def handle_challenge_submission(request, challenge_id):
     challenge = get_object_or_404(Challenge, id=challenge_id)
 
     # Create submission
-    submission = ChallengeSubmission.objects.create(
+    ChallengeSubmission.objects.create(
         user=request.user,
         challenge=challenge,
         submission_text=request.POST.get('submission_text')
@@ -330,7 +334,8 @@ def all_leaderboards(request):
         "global_entries": global_entries,
         "weekly_entries": weekly_entries,
         "monthly_entries": monthly_entries,
-        "challenge_entries": ChallengeSubmission.objects.select_related("user", "challenge").order_by("-points_awarded")[:10],
+        "challenge_entries": ChallengeSubmission.objects.select_related("user", "challenge")
+        .order_by("-points_awarded")[:10],
         "user_rank": user_rank,
         "user_weekly_rank": user_weekly_rank,
         "user_monthly_rank": user_monthly_rank,

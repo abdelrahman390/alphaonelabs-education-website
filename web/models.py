@@ -1206,7 +1206,12 @@ class ChallengeSubmission(models.Model):
 
 class Points(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="points")
-    challenge = models.ForeignKey("Challenge", on_delete=models.CASCADE, null=True, blank=True, related_name="points_awarded")
+    challenge = models.ForeignKey("Challenge",
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name="points_awarded"
+    )
     amount = models.IntegerField(default=0)
     reason = models.CharField(max_length=255, help_text="Reason for awarding points")
     point_type = models.CharField(max_length=20, default="regular", choices=[

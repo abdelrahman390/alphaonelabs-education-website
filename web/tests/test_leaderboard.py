@@ -2,6 +2,7 @@ from django.test import TestCase, Client
 from django.contrib.auth.models import User
 from django.urls import reverse
 from web.models import Points, Challenge, ChallengeSubmission
+from django.urls.exceptions import NoReverseMatch
 
 '''
 To run this test run this command:  python manage.py test web.tests.test_leaderboard.
@@ -12,6 +13,8 @@ OR
     Email: student2@example.com
     Password: testpass123
 '''
+
+
 class LeaderboardTestCase(TestCase):
     def setUp(self):
         # This runs before each test
@@ -68,10 +71,10 @@ class LeaderboardTestCase(TestCase):
         self.client.force_login(self.test_user)
 
         # Try common URL names for leaderboard
-        try:
-            leaderboard_url = reverse('leaderboard_main')  # Try common URL names
-        except:
-            leaderboard_url = '/en/leaderboards/'  # Note: plural form
+    try:
+        leaderboard_url = reverse('leaderboard_main')  # Try common URL names
+    except NoReverseMatch:
+        leaderboard_url = '/en/leaderboards/'  # Note: plural form
 
         response = self.client.get(leaderboard_url)
         self.assertEqual(response.status_code, 200)

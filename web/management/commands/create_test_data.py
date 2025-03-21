@@ -42,6 +42,7 @@ def random_date_between(start_date, end_date):
     random_seconds = random.randint(0, int(delta.total_seconds()))
     return start_date + timedelta(seconds=random_seconds)
 
+
 class Command(BaseCommand):
     help = "Creates test data for all models in the application"
 
@@ -153,7 +154,10 @@ class Command(BaseCommand):
                     submission.submitted_at = random_date
                     submission.save(update_fields=['submitted_at'])
 
-                    self.stdout.write(f"Created submission for {student.username} - Challenge {challenge.week_number} on {random_date.date()}")
+                    self.stdout.write(
+                        f"Created submission for {student.username} - "
+                        f"Challenge {challenge.week_number} on {random_date.date()}"
+                    )
 
                     # Find the points record created by the submission save method and update its date
                     points = Points.objects.filter(
