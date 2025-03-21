@@ -30,11 +30,12 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.template.loader import render_to_string
 from django.urls import NoReverseMatch, reverse, reverse_lazy
 from django.utils import timezone
-from .utils import (calculate_user_total_points,
-                    calculate_user_weekly_points,
-                    calculate_user_monthly_points,
-                    get_leaderboard,
-                    )
+from .utils import (
+    calculate_user_total_points,
+    calculate_user_weekly_points,
+    calculate_user_monthly_points,
+    get_leaderboard,
+)
 from django.utils.crypto import get_random_string
 from django.utils.html import strip_tags
 from django.views import generic
@@ -232,9 +233,7 @@ def handle_challenge_submission(request, challenge_id):
 
     # Create submission
     ChallengeSubmission.objects.create(
-        user=request.user,
-        challenge=challenge,
-        submission_text=request.POST.get('submission_text')
+        user=request.user, challenge=challenge, submission_text=request.POST.get("submission_text")
     )
 
     # Award points
@@ -242,10 +241,7 @@ def handle_challenge_submission(request, challenge_id):
 
     # Create points record
     Points.objects.create(
-        user=request.user,
-        challenge=challenge,
-        amount=points_amount,
-        reason=f"Completed challenge: {challenge.title}"
+        user=request.user, challenge=challenge, amount=points_amount, reason=f"Completed challenge: {challenge.title}"
     )
 
     # Calculate streak
@@ -259,10 +255,11 @@ def handle_challenge_submission(request, challenge_id):
 
         if last_week_submission:
             # Get the user's most recent points entry with a streak update
-            latest_streak = Points.objects.filter(
-                user=request.user,
-                reason__startswith="Streak update"
-            ).order_by('-awarded_at').first()
+            latest_streak = (
+                Points.objects.filter(user=request.user, reason__startswith="Streak update")
+                .order_by("-awarded_at")
+                .first()
+            )
 
             if latest_streak:
                 # Extract streak number from reason
@@ -278,10 +275,10 @@ def handle_challenge_submission(request, challenge_id):
         Points.objects.create(
             user=request.user,
             amount=current_streak,  # Maybe award points equal to streak count
-            reason=f"Streak update: {current_streak}"
+            reason=f"Streak update: {current_streak}",
         )
 
-    return redirect('challenge_detail', challenge_id=challenge_id)
+    return redirect("challenge_detail", challenge_id=challenge_id)
 
 
 # new future, #22 issue
@@ -293,8 +290,8 @@ def all_leaderboards(request):
 
     # Get leaderboard data for different time periods
     global_entries = get_leaderboard(period=None, limit=10)
-    weekly_entries = get_leaderboard(period='weekly', limit=10)
-    monthly_entries = get_leaderboard(period='monthly', limit=10)
+    weekly_entries = get_leaderboard(period="weekly", limit=10)
+    monthly_entries = get_leaderboard(period="monthly", limit=10)
 
     # Get user's rank if authenticated
     user_rank = None
@@ -309,33 +306,38 @@ def all_leaderboards(request):
         user_monthly_points = calculate_user_monthly_points(request.user)
 
         # Calculate ranks by counting users with more points
-        users_with_more_points = Points.objects.values('user').annotate(
-            total=models.Sum('amount')
-        ).filter(total__gt=user_points).count()
+        users_with_more_points = (
+            Points.objects.values("user").annotate(total=models.Sum("amount")).filter(total__gt=user_points).count()
+        )
         user_rank = users_with_more_points + 1
 
         one_week_ago = timezone.now() - timedelta(days=7)
-        users_with_more_weekly_points = Points.objects.filter(
-            awarded_at__gte=one_week_ago
-        ).values('user').annotate(
-            total=models.Sum('amount')
-        ).filter(total__gt=user_weekly_points).count()
+        users_with_more_weekly_points = (
+            Points.objects.filter(awarded_at__gte=one_week_ago)
+            .values("user")
+            .annotate(total=models.Sum("amount"))
+            .filter(total__gt=user_weekly_points)
+            .count()
+        )
         user_weekly_rank = users_with_more_weekly_points + 1
 
         one_month_ago = timezone.now() - timedelta(days=30)
-        users_with_more_monthly_points = Points.objects.filter(
-            awarded_at__gte=one_month_ago
-        ).values('user').annotate(
-            total=models.Sum('amount')
-        ).filter(total__gt=user_monthly_points).count()
+        users_with_more_monthly_points = (
+            Points.objects.filter(awarded_at__gte=one_month_ago)
+            .values("user")
+            .annotate(total=models.Sum("amount"))
+            .filter(total__gt=user_monthly_points)
+            .count()
+        )
         user_monthly_rank = users_with_more_monthly_points + 1
 
     context = {
         "global_entries": global_entries,
         "weekly_entries": weekly_entries,
         "monthly_entries": monthly_entries,
-        "challenge_entries": ChallengeSubmission.objects.select_related("user", "challenge")
-        .order_by("-points_awarded")[:10],
+        "challenge_entries": ChallengeSubmission.objects.select_related("user", "challenge").order_by(
+            "-points_awarded"
+        )[:10],
         "user_rank": user_rank,
         "user_weekly_rank": user_weekly_rank,
         "user_monthly_rank": user_monthly_rank,

@@ -1156,7 +1156,7 @@ class ChallengeSubmission(models.Model):
                 challenge=self.challenge,
                 amount=self.points_awarded,
                 reason=f"Completed challenge: Week {self.challenge.week_number}",
-                point_type="regular"
+                point_type="regular",
             )
 
             # Calculate and update streak
@@ -1170,9 +1170,9 @@ class ChallengeSubmission(models.Model):
 
                     if last_week_submission:
                         # User completed consecutive weeks, calculate their current streak
-                        streak_points = Points.objects.filter(
-                            user=self.user, point_type="streak"
-                        ).order_by('-awarded_at').first()
+                        streak_points = (
+                            Points.objects.filter(user=self.user, point_type="streak").order_by("-awarded_at").first()
+                        )
 
                         current_streak = 1
                         if streak_points and "Current streak:" in streak_points.reason:
@@ -1189,7 +1189,7 @@ class ChallengeSubmission(models.Model):
                             challenge=None,
                             amount=0,  # Just a record, no points awarded for the streak itself
                             reason=f"Current streak: {current_streak}",
-                            point_type="streak"
+                            point_type="streak",
                         )
 
                         # Award bonus points for streak milestones
@@ -1200,25 +1200,22 @@ class ChallengeSubmission(models.Model):
                                 challenge=None,
                                 amount=bonus,
                                 reason=f"Streak milestone bonus ({current_streak} weeks)",
-                                point_type="bonus"
+                                point_type="bonus",
                             )
 
 
 class Points(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="points")
-    challenge = models.ForeignKey("Challenge",
-        on_delete=models.CASCADE,
-        null=True,
-        blank=True,
-        related_name="points_awarded"
+    challenge = models.ForeignKey(
+        "Challenge", on_delete=models.CASCADE, null=True, blank=True, related_name="points_awarded"
     )
     amount = models.IntegerField(default=0)
     reason = models.CharField(max_length=255, help_text="Reason for awarding points")
-    point_type = models.CharField(max_length=20, default="regular", choices=[
-        ("regular", "Regular Points"),
-        ("streak", "Streak Points"),
-        ("bonus", "Bonus Points")
-    ])
+    point_type = models.CharField(
+        max_length=20,
+        default="regular",
+        choices=[("regular", "Regular Points"), ("streak", "Streak Points"), ("bonus", "Bonus Points")],
+    )
     awarded_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):

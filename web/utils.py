@@ -45,31 +45,31 @@ def get_or_create_cart(request):
 
 def calculate_user_total_points(user):
     """Calculate total points for a user"""
-    return Points.objects.filter(user=user).aggregate(total=models.Sum('amount'))['total'] or 0
+    return Points.objects.filter(user=user).aggregate(total=models.Sum("amount"))["total"] or 0
 
 
 def calculate_user_weekly_points(user):
     """Calculate weekly points for a user"""
     one_week_ago = timezone.now() - timedelta(days=7)
 
-    return Points.objects.filter(
-        user=user, awarded_at__gte=one_week_ago
-    ).aggregate(total=models.Sum('amount'))['total'] or 0
+    return (
+        Points.objects.filter(user=user, awarded_at__gte=one_week_ago).aggregate(total=models.Sum("amount"))["total"]
+        or 0
+    )
 
 
 def calculate_user_monthly_points(user):
     """Calculate monthly points for a user"""
     one_month_ago = timezone.now() - timedelta(days=30)
-    return Points.objects.filter(
-        user=user, awarded_at__gte=one_month_ago
-    ).aggregate(total=models.Sum('amount'))['total'] or 0
+    return (
+        Points.objects.filter(user=user, awarded_at__gte=one_month_ago).aggregate(total=models.Sum("amount"))["total"]
+        or 0
+    )
 
 
 def calculate_user_streak(user):
     """Calculate current streak for a user"""
-    streak_record = Points.objects.filter(
-        user=user, point_type="streak"
-    ).order_by('-awarded_at').first()
+    streak_record = Points.objects.filter(user=user, point_type="streak").order_by("-awarded_at").first()
 
     if streak_record and "Current streak:" in streak_record.reason:
         try:
@@ -96,31 +96,31 @@ def get_leaderboard(period=None, limit=10):
         challenge_count = ChallengeSubmission.objects.filter(user=user).count()
 
         # Skip users with no points in the relevant period
-        if period == 'weekly' and weekly_points <= 0:
+        if period == "weekly" and weekly_points <= 0:
             continue
-        elif period == 'monthly' and monthly_points <= 0:
+        elif period == "monthly" and monthly_points <= 0:
             continue
         elif period is None and total_points <= 0:
             continue
 
         # Add all data for every entry
         entry_data = {
-            'user': user,
-            'points': total_points,
-            'weekly_points': weekly_points,
-            'monthly_points': monthly_points,
-            'current_streak': current_streak,
-            'challenge_count': challenge_count
+            "user": user,
+            "points": total_points,
+            "weekly_points": weekly_points,
+            "monthly_points": monthly_points,
+            "current_streak": current_streak,
+            "challenge_count": challenge_count,
         }
 
         leaderboard_data.append(entry_data)
 
     # Sort by the appropriate field based on period
-    if period == 'weekly':
-        leaderboard_data.sort(key=lambda x: x['weekly_points'], reverse=True)
-    elif period == 'monthly':
-        leaderboard_data.sort(key=lambda x: x['monthly_points'], reverse=True)
+    if period == "weekly":
+        leaderboard_data.sort(key=lambda x: x["weekly_points"], reverse=True)
+    elif period == "monthly":
+        leaderboard_data.sort(key=lambda x: x["monthly_points"], reverse=True)
     else:
-        leaderboard_data.sort(key=lambda x: x['points'], reverse=True)
+        leaderboard_data.sort(key=lambda x: x["points"], reverse=True)
 
     return leaderboard_data[:limit]
