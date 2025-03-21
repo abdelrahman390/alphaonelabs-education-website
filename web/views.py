@@ -30,12 +30,6 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.template.loader import render_to_string
 from django.urls import NoReverseMatch, reverse, reverse_lazy
 from django.utils import timezone
-from .utils import (
-    calculate_user_total_points,
-    calculate_user_weekly_points,
-    calculate_user_monthly_points,
-    get_leaderboard,
-)
 from django.utils.crypto import get_random_string
 from django.utils.html import strip_tags
 from django.views import generic
@@ -82,7 +76,7 @@ from .marketing import (
     get_promotion_recommendations,
     send_course_promotion_email,
 )
-from .models import (
+from .models import (  # FriendLeaderboard,; LeaderboardEntry,
     Achievement,
     BlogComment,
     BlogPost,
@@ -102,14 +96,12 @@ from .models import (
     ForumReply,
     ForumTopic,
     Goods,
-    Points,
-    # FriendLeaderboard,
-    # LeaderboardEntry,
     Meme,
     Order,
     OrderItem,
     PeerConnection,
     PeerMessage,
+    Points,
     ProductImage,
     Profile,
     ProgressTracker,
@@ -127,7 +119,13 @@ from .models import (
 from .notifications import notify_session_reminder, notify_teacher_new_enrollment, send_enrollment_confirmation
 from .referrals import send_referral_reward_email
 from .social import get_social_stats
-from .utils import get_or_create_cart
+from .utils import (
+    calculate_user_monthly_points,
+    calculate_user_total_points,
+    calculate_user_weekly_points,
+    get_leaderboard,
+    get_or_create_cart,
+)
 
 GOOGLE_CREDENTIALS_PATH = os.path.join(settings.BASE_DIR, "google_credentials.json")
 

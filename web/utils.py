@@ -1,14 +1,15 @@
+from datetime import timedelta
+
 import requests
 from django.conf import settings
 from django.db import models
 from django.utils import timezone
-from datetime import timedelta
 
 from web.models import (
     Cart,
+    ChallengeSubmission,
     Points,
     User,
-    ChallengeSubmission,
 )
 
 

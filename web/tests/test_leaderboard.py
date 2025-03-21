@@ -1,8 +1,9 @@
-from django.test import TestCase, Client
 from django.contrib.auth.models import User
+from django.test import Client, TestCase
 from django.urls import reverse
-from web.models import Points, Challenge, ChallengeSubmission
 from django.urls.exceptions import NoReverseMatch
+
+from web.models import Challenge, ChallengeSubmission, Points
 
 """
 To run this test run this command:  python manage.py test web.tests.test_leaderboard.
@@ -56,16 +57,17 @@ class LeaderboardTestCase(TestCase):
         self.assertEqual(response.status_code, 200)
 
     def test_leaderboard_access(self):
+        # Log in the user
         self.client.force_login(self.test_user)
 
         # Try common URL names for leaderboard
+        try:
+            leaderboard_url = reverse("leaderboard_main")  # Try common URL names
+        except NoReverseMatch:
+            leaderboard_url = "/en/leaderboards/"  # Note: plural form
 
-    try:
-        leaderboard_url = reverse("leaderboard_main")  # Try common URL names
-    except NoReverseMatch:
-        leaderboard_url = "/en/leaderboards/"  # Note: plural form
-
-        response = self.client.get(leaderboard_url)
+        # Add follow=True to follow redirects
+        response = self.client.get(leaderboard_url, follow=True)
         self.assertEqual(response.status_code, 200)
 
         # Check for leaderboard content

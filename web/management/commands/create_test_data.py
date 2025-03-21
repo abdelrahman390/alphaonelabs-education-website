@@ -14,6 +14,7 @@ from web.models import (
     BlogComment,
     BlogPost,
     Challenge,
+    ChallengeSubmission,
     Course,
     CourseMaterial,
     CourseProgress,
@@ -22,9 +23,9 @@ from web.models import (
     ForumReply,
     ForumTopic,
     Goods,
-    Points,
     PeerConnection,
     PeerMessage,
+    Points,
     ProductImage,
     Profile,
     Review,
@@ -33,7 +34,6 @@ from web.models import (
     Storefront,
     StudyGroup,
     Subject,
-    ChallengeSubmission,
 )
 
 
@@ -215,7 +215,7 @@ class Command(BaseCommand):
             for _ in range(random.randint(1, 5)):
                 points_amount = random.randint(5, 50)
                 points = Points.objects.create(
-                    user=user, amount=points_amount, reason=f"Test data - Random activity points", point_type="regular"
+                    user=user, amount=points_amount, reason="Test data - Random activity points", point_type="regular"
                 )
 
                 # Assign random date
@@ -264,7 +264,7 @@ class Command(BaseCommand):
             points = Points.objects.create(
                 user=user,
                 amount=score,
-                reason=f"Test data - Random points",
+                reason="Test data - Random points",
                 challenge=challenges[0] if challenges else None,
             )
 
