@@ -1,6 +1,6 @@
 from django.contrib.auth.models import User
 from django.db import models
-from django.test import Client, TestCase, override_settings
+from django.test import TestCase, override_settings
 from django.urls import reverse
 
 from web.models import Course, Enrollment, Profile, Subject, WebRequest
@@ -15,7 +15,6 @@ from web.models import Course, Enrollment, Profile, Subject, WebRequest
 class ReferralTests(TestCase):
     @classmethod
     def setUpTestData(cls):
-        cls.client = Client()
 
         # Create test users
         cls.user1 = User.objects.create_user(username="user1", email="user1@example.com", password="testpass123")

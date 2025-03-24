@@ -19,6 +19,7 @@ if os.path.exists(env_file):
 else:
     print("No .env file found.")
 
+
 if "test" in sys.argv:
     TESTING = True
 else:

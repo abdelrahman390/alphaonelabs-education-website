@@ -1,11 +1,9 @@
-# /tests/conftest.py and /web/tests/conftest.py
 import pytest
 from django.contrib.auth.models import User
 
 from web.models import Course, Profile, Subject
 
 
-# @pytest.fixture
 @pytest.fixture(scope="class")
 def test_user():
     user = User.objects.create_user(username="testuser", email="test@example.com", password="testpass123")
@@ -13,7 +11,7 @@ def test_user():
     # No need to delete due to transaction rollback
 
 
-@pytest.fixture
+@pytest.fixture(scope="class")
 def test_teacher():
     teacher = User.objects.create_user(
         username="teacher",
@@ -24,14 +22,14 @@ def test_teacher():
     return teacher
 
 
-@pytest.fixture
+@pytest.fixture(scope="class")
 def test_subject():
     return Subject.objects.create(
         name="Test Subject", slug="test-subject", description="Test description", icon="fas fa-code"
     )
 
 
-@pytest.fixture
+@pytest.fixture(scope="class")
 def test_course(test_teacher, test_subject):
     return Course.objects.create(
         title="Test Course",
