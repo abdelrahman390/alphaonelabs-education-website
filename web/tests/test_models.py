@@ -1,4 +1,3 @@
-import pytest
 from django.contrib.auth.models import User
 from django.test import TestCase, override_settings
 
@@ -130,7 +129,6 @@ class EnrollmentModelTests(TestCase):
             level="beginner",
         )
 
-    @pytest.mark.slow
     def test_enrollment_creation(self):
         """Test enrollment creation"""
         enrollment = Enrollment.objects.create(
